@@ -1,0 +1,226 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Provider {
+  id            String    @id @default(cuid())
+  name          String                          // "Coda", "Epin", "Marti"
+  type          ProviderType                    // API | STOCK
+  isActive      Boolean   @default(true)
+  apiUsername   String?
+  apiPasswordEnc String?                        // AES şifreli
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  products      Product[]
+  orders        Order[]
+}
+
+model SalesChannel {
+  id              String   @id @default(cuid())
+  name            String                        // "Trendyol", "HepsiBurada", "Ozan"
+  webhookIps      String[]                      // Allowed IP list
+  commissionPct   Decimal  @db.Decimal(5,2)
+  isActive        Boolean  @default(true)
+  countryCode     String?                       // "PK", "BD", "LK", "NP", "MM" for Daraz
+  createdAt       DateTime @default(now())
+  orders          Order[]
+  excessCodes     ExcessCode[]
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  providerId     String
+  provider       Provider @relation(fields: [providerId], references: [id])
+  externalId     String                         // Turkpin product ID
+  name           String                         // "PUBG Mobile 60 UC"
+  sku            String                         // "PUBGMTR60"
+  purchasePrice  Decimal  @db.Decimal(10,4)
+  sellingPrice   Decimal  @db.Decimal(10,4)
+  marginPct      Decimal  @db.Decimal(5,2)
+  stock          Int      @default(0)
+  isActive       Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  denomination   String?                        // "25", "50", "100" for Martı
+  orders         Order[]
+  stockAlerts    StockAlert[]
+  excessCodes    ExcessCode[]
+
+  @@index([providerId, isActive])
+  @@index([sku])
+}
+
+model Order {
+  id               String       @id @default(cuid())
+  idempotencyKey   String       @unique          // Kanal sipariş ID — tekrar işlemi önler
+  channelId        String
+  channel          SalesChannel @relation(fields: [channelId], references: [id])
+  providerId       String
+  provider         Provider     @relation(fields: [providerId], references: [id])
+  productId        String
+  product          Product      @relation(fields: [productId], references: [id])
+  customerName     String
+  customerEmail    String?
+  customerPhone    String?
+  sellingPrice     Decimal      @db.Decimal(10,4)
+  purchasePrice    Decimal      @db.Decimal(10,4)
+  commissionPct    Decimal      @db.Decimal(5,2)
+  commissionAmount Decimal      @db.Decimal(10,4)
+  profit           Decimal      @db.Decimal(10,4)
+  status           OrderStatus  @default(PENDING)
+  externalId       String?                      // Kanal sipariş ID
+  metadata         Json        @default("{}")   // Kanala özel veri
+  digitalCodeEnc   String?                       // AES şifreli kod
+  providerOrderNo  String?
+  orderedAt        DateTime
+  fulfilledAt      DateTime?
+  createdAt        DateTime     @default(now())
+}
+
+model MartiStockUpload {
+  id          String   @id @default(cuid())
+  uploadedBy  String                        // userId
+  fileName    String
+  totalCodes  Int
+  denomination String                       // "25" | "50" | "100"
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    AuditAction
+  entity    String
+  entityId  String?
+  meta      Json
+  ip        String
+  createdAt DateTime @default(now())
+  // DB trigger ile UPDATE ve DELETE engellenir
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  passwordHash        String                           // bcrypt, cost 12
+  name                String                           // User's full name
+  role                UserRole
+  isActive            Boolean   @default(true)
+  forcePasswordChange Boolean   @default(false)      // Force password change on next login
+  lastLoginAt         DateTime?
+  createdAt           DateTime  @default(now())
+}
+
+enum ProviderType  { 
+  API 
+  STOCK 
+}
+
+enum ExcessCodeStatus { 
+  PENDING 
+  SENT_TO_CUSTOMER 
+  RETURNED_TO_PROVIDER 
+  WRITTEN_OFF 
+}
+
+enum AlertType        { 
+  LOW_STOCK 
+  OUT_OF_STOCK 
+  BACK_IN_STOCK 
+  BALANCE_LOW 
+}
+
+enum NotificationType { 
+  STOCK_ALERT 
+  BALANCE_ALERT 
+  ORDER_FAILED 
+  SYSTEM 
+}
+
+enum OrderStatus   { 
+  PENDING 
+  FULFILLED 
+  FAILED 
+  DUPLICATE 
+}
+
+enum UserRole      { 
+  ADMIN 
+  OPERATIONS 
+  ACCOUNTING 
+  PRICING 
+}
+
+enum AuditAction   {
+  CODE_FETCH
+  LOGIN
+  LOGOUT
+  PRICE_UPDATE
+  MARGIN_UPDATE
+  TOGGLE_CHANGE
+  WEBHOOK_BLOCKED
+  DUPLICATE_ORDER
+  RATE_LIMIT_HIT
+  USER_CREATED
+  USER_UPDATED
+  USER_DEACTIVATED
+  ALERT_CREATED
+  ALERT_TRIGGERED
+  EXCESS_CODE_SENT
+  EXCESS_CODE_WRITTEN_OFF
+}
+
+model StockAlert {
+  id              String   @id @default(cuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+  alertType       AlertType
+  threshold       Int?               // Kaç adet altında uyarı
+  isActive        Boolean  @default(true)
+  notifyEmail     String[]           // Bildirim gönderilecek e-postalar
+  lastTriggeredAt DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([productId])
+  @@index([alertType, isActive])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  message   String
+  meta      Json     @default("{}")
+  isRead    Boolean  @default(false)
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([isRead, createdAt])
+  @@index([type, createdAt])
+}
+
+model ExcessCode {
+  id             String           @id @default(cuid())
+  productId      String
+  product        Product          @relation(fields: [productId], references: [id])
+  channelId      String?
+  channel        SalesChannel?    @relation(fields: [channelId], references: [id])
+  digitalCode    String           // Plaintext (bu tablo şifreli tutulmaz, kod zaten kullanılamaz durumda)
+  providerOrderNo String?
+  reason         String           // "FULFILLMENT_FAILED" | "ORDER_CANCELLED"
+  status         ExcessCodeStatus @default(PENDING)
+  resolvedAt     DateTime?
+  resolvedBy     String?          // userId
+  createdAt      DateTime         @default(now())
+
+  @@index([productId, status])
+  @@index([channelId, status])
+  @@index([status, createdAt])
+}

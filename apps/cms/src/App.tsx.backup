@@ -1,0 +1,1949 @@
+import React, { useState } from 'react'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { 
+  Home, 
+  ShoppingCart, 
+  Package, 
+  Server, 
+  Users, 
+  TrendingUp, 
+  AlertTriangle 
+} from 'lucide-react'
+import { ToggleSwitch, MonthFilter, formatCurrency, formatDateTime } from './components/UIComponents'
+import { mockProviders, mockChannels, months, activeMonth } from './mock/data'
+
+// Layout with Sidebar
+function LayoutWithSidebar({ children }: { children: React.ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const location = useLocation()
+  
+  // Navigation items
+  const navigation = [
+    // Ana navigasyon
+    { name: 'Ana Sayfa', href: '/dashboard', icon: Home },
+    { name: 'Siparişler', href: '/orders', icon: ShoppingCart },
+    { name: 'Ürünler', href: '/products', icon: Package },
+    { name: 'Distribütörler', href: '/providers', icon: Server },
+    { name: 'Kanallar', href: '/channels', icon: Users },
+    
+    // Phase 4
+    { name: 'Raporlar', href: '/reports', icon: TrendingUp },
+    { name: 'Stok Uyarıları', href: '/stock-alerts', icon: AlertTriangle },
+    { name: 'Fazlalık Kodlar', href: '/excess-codes', icon: AlertTriangle },
+    { name: 'Sistem Sağlığı', href: '/system-health', icon: Server },
+  ]
+
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#F8F9FC', display: 'flex' }}>
+      {/* Sidebar */}
+      <div style={{
+        width: '256px',
+        backgroundColor: '#FFFFFF',
+        borderRight: '1px solid #E5E7EB',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'fixed',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        zIndex: 50
+      }}>
+        {/* Logo */}
+        <div style={{ 
+          display: 'flex', 
+          height: '64px', 
+          alignItems: 'center', 
+          padding: '0 24px',
+          borderBottom: '1px solid #E5E7EB',
+          backgroundColor: '#FFFFFF'
+        }}>
+          <h1 style={{ fontSize: '20px', fontWeight: 'bold', color: '#E94560' }}>Omega Digital</h1>
+        </div>
+
+        {/* Navigation */}
+        <nav style={{ flex: 1, padding: '16px 12px', overflowY: 'auto' }}>
+          {navigation.map((item) => {
+            const isActive = location.pathname === item.href
+            
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px 24px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  borderRadius: '6px',
+                  transition: 'all 0.2s',
+                  cursor: 'pointer',
+                  textDecoration: 'none',
+                  color: isActive ? '#E94560' : '#374151',
+                  backgroundColor: isActive ? '#FEF2F4' : 'transparent',
+                  borderLeft: isActive ? '4px solid #E94560' : '4px solid transparent',
+                  marginLeft: isActive ? '0' : '4px',
+                  marginBottom: '4px'
+                }}
+              >
+                <item.icon style={{ width: '20px', height: '20px', marginRight: '12px' }} />
+                {item.name}
+              </Link>
+            )
+          })}
+        </nav>
+
+        {/* User section */}
+        <div style={{ borderTop: '1px solid #E5E7EB', padding: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: '14px', fontWeight: '500', color: '#111827', margin: 0 }}>
+                Admin User
+              </p>
+              <p style={{ fontSize: '12px', color: '#6B7280', margin: 0 }}>
+                ADMIN
+              </p>
+            </div>
+            <button
+              style={{ 
+                padding: '8px', 
+                color: '#9CA3AF', 
+                cursor: 'pointer',
+                border: 'none',
+                backgroundColor: 'transparent',
+                borderRadius: '4px'
+              }}
+            >
+              ⚙️
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div style={{ marginLeft: '256px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <header style={{ 
+          backgroundColor: '#FFFFFF', 
+          borderBottom: '1px solid #E5E7EB',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 40
+        }}>
+          <div style={{ padding: '16px 24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+                {navigation.find(item => item.href === location.pathname)?.name || 'Omega Digital'}
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ fontSize: '14px', color: '#6B7280' }}>
+                  {new Date().toLocaleDateString('tr-TR', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main style={{ padding: '24px', backgroundColor: '#F8F9FC', flex: 1 }}>
+          {children}
+        </main>
+      </div>
+    </div>
+  )
+}
+
+// Simple Dashboard
+function SimpleDashboard() {
+  return (
+    <div>
+      <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+        Ana Sayfa
+      </h2>
+      <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '24px' }}>
+        Genel bakış ve istatistikler
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+          borderLeft: '4px solid #E94560'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Başarılı Siparişler
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>5,050</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Bu ay</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+          borderLeft: '4px solid #E94560'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Çekilen Kodlar
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>5,050</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Bu ay</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+          borderLeft: '4px solid #E94560'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Ciro
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>₺600,000</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Bu ay</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+          borderLeft: '4px solid #E94560'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Karlılık
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>₺120,000</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Bu ay</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Simple Reports
+function SimpleReports() {
+  return (
+    <div>
+      <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+        Raporlar
+      </h2>
+      <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '24px' }}>
+        Gelişmiş analiz ve raporlama
+      </p>
+
+      <div style={{ 
+        backgroundColor: '#FFFFFF', 
+        border: '1px solid #E5E7EB', 
+        borderRadius: '8px', 
+        padding: '24px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+      }}>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+          Gelir Trendi
+        </h3>
+        <p style={{ color: '#6B7280' }}>
+          Rapor verileri burada gösterilecek...
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// Simple Stock Alerts
+function SimpleStockAlerts() {
+  return (
+    <div>
+      <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+        Stok Uyarıları
+      </h2>
+      <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '24px' }}>
+        Stok seviyesi takibi ve bildirim yönetimi
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '24px' }}>
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Aktif Uyarılar
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>12</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Bu hafta</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Düşük Stok
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#F59E0B' }}>5</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Ürün</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Stokta Yok
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#EF4444' }}>3</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Ürün</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Bildirimler
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>28</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Gönderildi</p>
+        </div>
+      </div>
+
+      <div style={{ 
+        backgroundColor: '#FFFFFF', 
+        border: '1px solid #E5E7EB', 
+        borderRadius: '8px', 
+        padding: '24px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+      }}>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+          Son Uyarılar
+        </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '12px', 
+            backgroundColor: '#FEF2F4', 
+            borderRadius: '8px',
+            borderLeft: '4px solid #E94560'
+          }}>
+            <div>
+              <p style={{ fontWeight: '500', color: '#111827' }}>PUBG Mobile 100 TL - Düşük Stok</p>
+              <p style={{ fontSize: '14px', color: '#6B7280' }}>Mevcut: 15, Min: 50</p>
+            </div>
+            <div style={{ padding: '4px 12px', backgroundColor: '#F59E0B', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+              DÜŞÜK
+            </div>
+          </div>
+          
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '12px', 
+            backgroundColor: '#FEF2F4', 
+            borderRadius: '8px',
+            borderLeft: '4px solid #E94560'
+          }}>
+            <div>
+              <p style={{ fontWeight: '500', color: '#111827' }}>Valorant 500 TL - Stokta Yok</p>
+              <p style={{ fontSize: '14px', color: '#6B7280' }}>Mevcut: 0, Min: 25</p>
+            </div>
+            <div style={{ padding: '4px 12px', backgroundColor: '#EF4444', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+              YOK
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Simple Excess Codes
+function SimpleExcessCodes() {
+  return (
+    <div>
+      <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+        Fazlalık Kodlar
+      </h2>
+      <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '24px' }}>
+        Fazlalık kod yönetimi ve çözüm süreçleri
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '24px' }}>
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Bekleyen
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>8</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Kod</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Gönderildi
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#10B981' }}>24</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Bu ay</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            İptal Edildi
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#EF4444' }}>3</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Bu ay</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Toplam Değer
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>₺12,500</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Bekleyen</p>
+        </div>
+      </div>
+
+      <div style={{ 
+        backgroundColor: '#FFFFFF', 
+        border: '1px solid #E5E7EB', 
+        borderRadius: '8px', 
+        padding: '24px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+      }}>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+          Bekleyen Kodlar
+        </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '12px', 
+            backgroundColor: '#F9FAFB', 
+            borderRadius: '8px'
+          }}>
+            <div>
+              <p style={{ fontWeight: '500', color: '#111827' }}>EXC-001 - PUBG Mobile 100 TL</p>
+              <p style={{ fontSize: '14px', color: '#6B7280' }}>Sipariş: #12345, Tarih: 28.03.2026</p>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button style={{ padding: '6px 12px', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                Gönder
+              </button>
+              <button style={{ padding: '6px 12px', backgroundColor: '#EF4444', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                İptal
+              </button>
+            </div>
+          </div>
+          
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '12px', 
+            backgroundColor: '#F9FAFB', 
+            borderRadius: '8px'
+          }}>
+            <div>
+              <p style={{ fontWeight: '500', color: '#111827' }}>EXC-002 - Valorant 500 TL</p>
+              <p style={{ fontSize: '14px', color: '#6B7280' }}>Sipariş: #12346, Tarih: 28.03.2026</p>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button style={{ padding: '6px 12px', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                Gönder
+              </button>
+              <button style={{ padding: '6px 12px', backgroundColor: '#EF4444', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                İptal
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Simple Orders
+function SimpleOrders() {
+  return (
+    <div>
+      <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+        Siparişler
+      </h2>
+      <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '24px' }}>
+        Sipariş yönetimi ve takip sistemi
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '24px' }}>
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Toplam Sipariş
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>5,050</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Bu ay</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Başarılı
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#10B981' }}>4,892</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>%96.9</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Bekleyen
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#F59E0B' }}>127</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>İşlemde</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            İptal Edildi
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#EF4444' }}>31</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Bu ay</p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div style={{ 
+        backgroundColor: '#FFFFFF', 
+        border: '1px solid #E5E7EB', 
+        borderRadius: '8px', 
+        padding: '16px 24px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+        marginBottom: '24px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <select style={{ 
+              padding: '8px 12px', 
+              border: '1px solid #E5E7EB', 
+              borderRadius: '6px', 
+              fontSize: '14px',
+              backgroundColor: '#FFFFFF',
+              color: '#111827'
+            }}>
+              <option>Tüm Durumlar</option>
+              <option>Başarılı</option>
+              <option>Bekleyen</option>
+              <option>İptal Edildi</option>
+            </select>
+            
+            <select style={{ 
+              padding: '8px 12px', 
+              border: '1px solid #E5E7EB', 
+              borderRadius: '6px', 
+              fontSize: '14px',
+              backgroundColor: '#FFFFFF',
+              color: '#111827'
+            }}>
+              <option>Tüm Kanallar</option>
+              <option>Trendyol</option>
+              <option>Ozan</option>
+              <option>Migros</option>
+            </select>
+            
+            <input 
+              type="date" 
+              style={{ 
+                padding: '8px 12px', 
+                border: '1px solid #E5E7EB', 
+                borderRadius: '6px', 
+                fontSize: '14px',
+                backgroundColor: '#FFFFFF',
+                color: '#111827'
+              }}
+            />
+            
+            <input 
+              type="text" 
+              placeholder="Sipariş ara..." 
+              style={{ 
+                padding: '8px 12px', 
+                border: '1px solid #E5E7EB', 
+                borderRadius: '6px', 
+                fontSize: '14px',
+                backgroundColor: '#FFFFFF',
+                color: '#111827',
+                width: '200px'
+              }}
+            />
+          </div>
+          
+          <button style={{ 
+            padding: '8px 16px', 
+            backgroundColor: '#E94560', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '6px', 
+            fontSize: '14px',
+            cursor: 'pointer'
+          }}>
+            Filtrele
+          </button>
+        </div>
+      </div>
+
+      {/* Orders Table */}
+      <div style={{ 
+        backgroundColor: '#FFFFFF', 
+        border: '1px solid #E5E7EB', 
+        borderRadius: '8px', 
+        padding: '24px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+            Son Siparişler
+          </h3>
+          <button style={{ 
+            padding: '8px 16px', 
+            backgroundColor: '#10B981', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '6px', 
+            fontSize: '14px',
+            cursor: 'pointer'
+          }}>
+            Yeni Sipariş
+          </button>
+        </div>
+        
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#F9FAFB' }}>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Sipariş No
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Müşteri
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Ürün
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Kanal
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Tutar
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Durum
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Tarih
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  İşlemler
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  #ORD-001
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827' }}>
+                  Ahmet Yılmaz
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827' }}>
+                  PUBG Mobile 100 TL
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827' }}>
+                  Trendyol
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  ₺100.00
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <span style={{ padding: '4px 8px', backgroundColor: '#10B981', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+                    Başarılı
+                  </span>
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#6B7280' }}>
+                  28.03.2026 14:30
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button style={{ padding: '4px 8px', backgroundColor: '#3B82F6', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      Gör
+                    </button>
+                    <button style={{ padding: '4px 8px', backgroundColor: '#6B7280', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      İptal
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              
+              <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  #ORD-002
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827' }}>
+                  Ayşe Demir
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827' }}>
+                  Valorant 500 TL
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827' }}>
+                  Ozan
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  ₺500.00
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <span style={{ padding: '4px 8px', backgroundColor: '#F59E0B', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+                    Bekleyen
+                  </span>
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#6B7280' }}>
+                  28.03.2026 14:25
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button style={{ padding: '4px 8px', backgroundColor: '#3B82F6', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      Gör
+                    </button>
+                    <button style={{ padding: '4px 8px', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      Onayla
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              
+              <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  #ORD-003
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827' }}>
+                  Mehmet Kaya
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827' }}>
+                  Minecraft 200 TL
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827' }}>
+                  Migros
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  ₺200.00
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <span style={{ padding: '4px 8px', backgroundColor: '#EF4444', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+                    İptal Edildi
+                  </span>
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#6B7280' }}>
+                  28.03.2026 14:20
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button style={{ padding: '4px 8px', backgroundColor: '#3B82F6', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      Gör
+                    </button>
+                    <button style={{ padding: '4px 8px', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      Yeniden
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Simple Products
+function SimpleProducts() {
+  return (
+    <div>
+      <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+        Ürünler
+      </h2>
+      <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '24px' }}>
+        Ürün katalogu ve stok yönetimi
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '24px' }}>
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Toplam Ürün
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>156</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Aktif</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Stokta Var
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#10B981' }}>142</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>%91</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Düşük Stok
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#F59E0B' }}>8</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Uyarı</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Stokta Yok
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#EF4444' }}>6</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Tükendi</p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div style={{ 
+        backgroundColor: '#FFFFFF', 
+        border: '1px solid #E5E7EB', 
+        borderRadius: '8px', 
+        padding: '16px 24px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+        marginBottom: '24px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <select style={{ 
+              padding: '8px 12px', 
+              border: '1px solid #E5E7EB', 
+              borderRadius: '6px', 
+              fontSize: '14px',
+              backgroundColor: '#FFFFFF',
+              color: '#111827'
+            }}>
+              <option>Tüm Kategoriler</option>
+              <option>Oyun Kodları</option>
+              <option>Hediye Kartları</option>
+              <option>Dijital İçerik</option>
+            </select>
+            
+            <select style={{ 
+              padding: '8px 12px', 
+              border: '1px solid #E5E7EB', 
+              borderRadius: '6px', 
+              fontSize: '14px',
+              backgroundColor: '#FFFFFF',
+              color: '#111827'
+            }}>
+              <option>Tüm Stok Durumları</option>
+              <option>Stokta Var</option>
+              <option>Düşük Stok</option>
+              <option>Stokta Yok</option>
+            </select>
+            
+            <select style={{ 
+              padding: '8px 12px', 
+              border: '1px solid #E5E7EB', 
+              borderRadius: '6px', 
+              fontSize: '14px',
+              backgroundColor: '#FFFFFF',
+              color: '#111827'
+            }}>
+              <option>Tüm Fiyat Aralıkları</option>
+              <option>₺0 - ₺100</option>
+              <option>₺100 - ₺500</option>
+              <option>₺500+</option>
+            </select>
+            
+            <input 
+              type="text" 
+              placeholder="Ürün ara..." 
+              style={{ 
+                padding: '8px 12px', 
+                border: '1px solid #E5E7EB', 
+                borderRadius: '6px', 
+                fontSize: '14px',
+                backgroundColor: '#FFFFFF',
+                color: '#111827',
+                width: '200px'
+              }}
+            />
+          </div>
+          
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button style={{ 
+              padding: '8px 16px', 
+              backgroundColor: '#E94560', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '6px', 
+              fontSize: '14px',
+              cursor: 'pointer'
+            }}>
+              Filtrele
+            </button>
+            <button style={{ 
+              padding: '8px 16px', 
+              backgroundColor: '#10B981', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '6px', 
+              fontSize: '14px',
+              cursor: 'pointer'
+            }}>
+              Yeni Ürün
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Products Grid */}
+      <div style={{ 
+        backgroundColor: '#FFFFFF', 
+        border: '1px solid #E5E7EB', 
+        borderRadius: '8px', 
+        padding: '24px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+            Ürün Listesi
+          </h3>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button style={{ 
+              padding: '6px 12px', 
+              backgroundColor: '#F3F4F6', 
+              color: '#374151', 
+              border: '1px solid #E5E7EB',
+              borderRadius: '6px', 
+              fontSize: '12px',
+              cursor: 'pointer'
+            }}>
+              Grid
+            </button>
+            <button style={{ 
+              padding: '6px 12px', 
+              backgroundColor: '#E94560', 
+              color: 'white', 
+              border: 'none',
+              borderRadius: '6px', 
+              fontSize: '12px',
+              cursor: 'pointer'
+            }}>
+              Liste
+            </button>
+          </div>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+          {/* Product Card 1 */}
+          <div style={{ 
+            border: '1px solid #E5E7EB', 
+            borderRadius: '8px', 
+            overflow: 'hidden',
+            transition: 'transform 0.2s, box-shadow 0.2s'
+          }}>
+            <div style={{ 
+              height: '160px', 
+              backgroundColor: '#F9FAFB', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              borderBottom: '1px solid #E5E7EB'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '48px', marginBottom: '8px' }}>🎮</div>
+                <p style={{ fontSize: '12px', color: '#6B7280' }}>PUBG Mobile</p>
+              </div>
+            </div>
+            <div style={{ padding: '16px' }}>
+              <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+                PUBG Mobile 100 TL
+              </h4>
+              <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '12px', lineHeight: '1.5' }}>
+                Popüler battle royale oyunu için 100 TL değerinde hediye kodu
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>₺100.00</span>
+                <span style={{ padding: '4px 8px', backgroundColor: '#10B981', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+                  Stokta Var
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280' }}>
+                <span>Stok: 45 adet</span>
+                <span>Kategori: Oyun Kodları</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                <button style={{ 
+                  flex: 1, 
+                  padding: '8px', 
+                  backgroundColor: '#3B82F6', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}>
+                  Düzenle
+                </button>
+                <button style={{ 
+                  flex: 1, 
+                  padding: '8px', 
+                  backgroundColor: '#F59E0B', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}>
+                  Stok
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Product Card 2 */}
+          <div style={{ 
+            border: '1px solid #E5E7EB', 
+            borderRadius: '8px', 
+            overflow: 'hidden',
+            transition: 'transform 0.2s, box-shadow 0.2s'
+          }}>
+            <div style={{ 
+              height: '160px', 
+              backgroundColor: '#F9FAFB', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              borderBottom: '1px solid #E5E7EB'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '48px', marginBottom: '8px' }}>🔫</div>
+                <p style={{ fontSize: '12px', color: '#6B7280' }}>Valorant</p>
+              </div>
+            </div>
+            <div style={{ padding: '16px' }}>
+              <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+                Valorant 500 TL
+              </h4>
+              <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '12px', lineHeight: '1.5' }}>
+                Riot Games'in popüler FPS oyunu için 500 TL değerinde VP kodu
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>₺500.00</span>
+                <span style={{ padding: '4px 8px', backgroundColor: '#F59E0B', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+                  Düşük Stok
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280' }}>
+                <span>Stok: 8 adet</span>
+                <span>Kategori: Oyun Kodları</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                <button style={{ 
+                  flex: 1, 
+                  padding: '8px', 
+                  backgroundColor: '#3B82F6', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}>
+                  Düzenle
+                </button>
+                <button style={{ 
+                  flex: 1, 
+                  padding: '8px', 
+                  backgroundColor: '#F59E0B', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}>
+                  Stok
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Product Card 3 */}
+          <div style={{ 
+            border: '1px solid #E5E7EB', 
+            borderRadius: '8px', 
+            overflow: 'hidden',
+            transition: 'transform 0.2s, box-shadow 0.2s'
+          }}>
+            <div style={{ 
+              height: '160px', 
+              backgroundColor: '#F9FAFB', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              borderBottom: '1px solid #E5E7EB'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '48px', marginBottom: '8px' }}>⛏️</div>
+                <p style={{ fontSize: '12px', color: '#6B7280' }}>Minecraft</p>
+              </div>
+            </div>
+            <div style={{ padding: '16px' }}>
+              <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+                Minecraft 200 TL
+              </h4>
+              <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '12px', lineHeight: '1.5' }}>
+                Mojang'ın popüler sandbox oyunu için 200 TL değerinde hediye kodu
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>₺200.00</span>
+                <span style={{ padding: '4px 8px', backgroundColor: '#EF4444', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+                  Stokta Yok
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280' }}>
+                <span>Stok: 0 adet</span>
+                <span>Kategori: Oyun Kodları</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                <button style={{ 
+                  flex: 1, 
+                  padding: '8px', 
+                  backgroundColor: '#3B82F6', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}>
+                  Düzenle
+                </button>
+                <button style={{ 
+                  flex: 1, 
+                  padding: '8px', 
+                  backgroundColor: '#10B981', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}>
+                  Sipariş Et
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Product Card 4 */}
+          <div style={{ 
+            border: '1px solid #E5E7EB', 
+            borderRadius: '8px', 
+            overflow: 'hidden',
+            transition: 'transform 0.2s, box-shadow 0.2s'
+          }}>
+            <div style={{ 
+              height: '160px', 
+              backgroundColor: '#F9FAFB', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              borderBottom: '1px solid #E5E7EB'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '48px', marginBottom: '8px' }}>🎯</div>
+                <p style={{ fontSize: '12px', color: '#6B7280' }}>CS:GO</p>
+              </div>
+            </div>
+            <div style={{ padding: '16px' }}>
+              <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+                CS:GO 150 TL
+              </h4>
+              <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '12px', lineHeight: '1.5' }}>
+                Valve'ın klasik FPS oyunu için 150 TL değerinde hediye kodu
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>₺150.00</span>
+                <span style={{ padding: '4px 8px', backgroundColor: '#10B981', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+                  Stokta Var
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280' }}>
+                <span>Stok: 32 adet</span>
+                <span>Kategori: Oyun Kodları</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                <button style={{ 
+                  flex: 1, 
+                  padding: '8px', 
+                  backgroundColor: '#3B82F6', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}>
+                  Düzenle
+                </button>
+                <button style={{ 
+                  flex: 1, 
+                  padding: '8px', 
+                  backgroundColor: '#F59E0B', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}>
+                  Stok
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Simple Providers (Distribütörler)
+function SimpleProviders() {
+  return (
+    <div>
+      <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+        Distribütörler
+      </h2>
+      <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '24px' }}>
+        Distribütör yönetimi ve performans takibi
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '24px' }}>
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Toplam Distribütör
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>8</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Sistemde</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Aktif
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#10B981' }}>6</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>%75</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Pasif
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#F59E0B' }}>2</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Bakımda</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Toplam Ciro
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>₺450K</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Bu ay</p>
+        </div>
+      </div>
+
+      <div style={{ 
+        backgroundColor: '#FFFFFF', 
+        border: '1px solid #E5E7EB', 
+        borderRadius: '8px', 
+        padding: '24px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+            Distribütör Listesi
+          </h3>
+          <button style={{ 
+            padding: '8px 16px', 
+            backgroundColor: '#10B981', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '6px', 
+            fontSize: '14px',
+            cursor: 'pointer'
+          }}>
+            Yeni Distribütör
+          </button>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+          <div style={{ 
+            border: '1px solid #E5E7EB', 
+            borderRadius: '8px', 
+            padding: '20px',
+            position: 'relative'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#111827' }}>Coda Payments</h4>
+              <span style={{ padding: '4px 8px', backgroundColor: '#10B981', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+                Aktif
+              </span>
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>API Anahtarı</p>
+              <p style={{ fontSize: '12px', color: '#111827', fontFamily: 'monospace', backgroundColor: '#F3F4F6', padding: '4px 8px', borderRadius: '4px' }}>
+                CODA_2026_***
+              </p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
+              <span style={{ color: '#6B7280' }}>Siparişler:</span>
+              <span style={{ fontWeight: '500', color: '#111827' }}>3,245</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
+              <span style={{ color: '#6B7280' }}>Başarı Oranı:</span>
+              <span style={{ fontWeight: '500', color: '#10B981' }}>98.5%</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '16px' }}>
+              <span style={{ color: '#6B7280' }}>Ciro:</span>
+              <span style={{ fontWeight: '500', color: '#111827' }}>₺324,500</span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button style={{ 
+                flex: 1, 
+                padding: '8px', 
+                backgroundColor: '#3B82F6', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '4px', 
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}>
+                Detaylar
+              </button>
+              <button style={{ 
+                flex: 1, 
+                padding: '8px', 
+                backgroundColor: '#F59E0B', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '4px', 
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}>
+                Test Et
+              </button>
+            </div>
+          </div>
+
+          <div style={{ 
+            border: '1px solid #E5E7EB', 
+            borderRadius: '8px', 
+            padding: '20px',
+            position: 'relative'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#111827' }}>Epin</h4>
+              <span style={{ padding: '4px 8px', backgroundColor: '#10B981', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+                Aktif
+              </span>
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>API Anahtarı</p>
+              <p style={{ fontSize: '12px', color: '#111827', fontFamily: 'monospace', backgroundColor: '#F3F4F6', padding: '4px 8px', borderRadius: '4px' }}>
+                EPIN_2026_***
+              </p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
+              <span style={{ color: '#6B7280' }}>Siparişler:</span>
+              <span style={{ fontWeight: '500', color: '#111827' }}>1,567</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
+              <span style={{ color: '#6B7280' }}>Başarı Oranı:</span>
+              <span style={{ fontWeight: '500', color: '#10B981' }}>97.2%</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '16px' }}>
+              <span style={{ color: '#6B7280' }}>Ciro:</span>
+              <span style={{ fontWeight: '500', color: '#111827' }}>₺78,350</span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button style={{ 
+                flex: 1, 
+                padding: '8px', 
+                backgroundColor: '#3B82F6', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '4px', 
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}>
+                Detaylar
+              </button>
+              <button style={{ 
+                flex: 1, 
+                padding: '8px', 
+                backgroundColor: '#F59E0B', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '4px', 
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}>
+                Test Et
+              </button>
+            </div>
+          </div>
+
+          <div style={{ 
+            border: '1px solid #E5E7EB', 
+            borderRadius: '8px', 
+            padding: '20px',
+            position: 'relative'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#111827' }}>Martı</h4>
+              <span style={{ padding: '4px 8px', backgroundColor: '#F59E0B', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+                Pasif
+              </span>
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>API Anahtarı</p>
+              <p style={{ fontSize: '12px', color: '#111827', fontFamily: 'monospace', backgroundColor: '#F3F4F6', padding: '4px 8px', borderRadius: '4px' }}>
+                MARTI_2026_***
+              </p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
+              <span style={{ color: '#6B7280' }}>Siparişler:</span>
+              <span style={{ fontWeight: '500', color: '#111827' }}>238</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
+              <span style={{ color: '#6B7280' }}>Başarı Oranı:</span>
+              <span style={{ fontWeight: '500', color: '#F59E0B' }}>85.3%</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '16px' }}>
+              <span style={{ color: '#6B7280' }}>Ciro:</span>
+              <span style={{ fontWeight: '500', color: '#111827' }}>₺47,150</span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button style={{ 
+                flex: 1, 
+                padding: '8px', 
+                backgroundColor: '#3B82F6', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '4px', 
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}>
+                Detaylar
+              </button>
+              <button style={{ 
+                flex: 1, 
+                padding: '8px', 
+                backgroundColor: '#10B981', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '4px', 
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}>
+                Aktif Et
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Simple Channels
+function SimpleChannels() {
+  return (
+    <div>
+      <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+        Kanallar
+      </h2>
+      <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '24px' }}>
+        Satış kanalları ve performans analizi
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '24px' }}>
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Toplam Kanal
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>5</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Aktif</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            En Popüler
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Trendyol</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>%45.2</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Toplam Ciro
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>₺600K</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Bu ay</p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            Ort. Sipariş
+          </p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>1,010</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Kanal başına</p>
+        </div>
+      </div>
+
+      <div style={{ 
+        backgroundColor: '#FFFFFF', 
+        border: '1px solid #E5E7EB', 
+        borderRadius: '8px', 
+        padding: '24px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+            Kanal Performansları
+          </h3>
+          <button style={{ 
+            padding: '8px 16px', 
+            backgroundColor: '#10B981', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '6px', 
+            fontSize: '14px',
+            cursor: 'pointer'
+          }}>
+            Yeni Kanal
+          </button>
+        </div>
+        
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#F9FAFB' }}>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Kanal
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Durum
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Siparişler
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Ciro
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Komisyon
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Performans
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  İşlemler
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '8px', height: '8px', backgroundColor: '#E94560', borderRadius: '50%' }}></div>
+                    Trendyol
+                  </div>
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <span style={{ padding: '4px 8px', backgroundColor: '#10B981', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+                    Aktif
+                  </span>
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  2,283
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  ₺271,000
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827' }}>
+                  8.5%
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '100px', height: '8px', backgroundColor: '#F3F4F6', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: '92%', height: '100%', backgroundColor: '#10B981' }}></div>
+                    </div>
+                    <span style={{ fontSize: '12px', color: '#6B7280' }}>92%</span>
+                  </div>
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button style={{ padding: '4px 8px', backgroundColor: '#3B82F6', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      Detay
+                    </button>
+                    <button style={{ padding: '4px 8px', backgroundColor: '#F59E0B', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      Ayarlar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              
+              <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '8px', height: '8px', backgroundColor: '#3B82F6', borderRadius: '50%' }}></div>
+                    Ozan
+                  </div>
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <span style={{ padding: '4px 8px', backgroundColor: '#10B981', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+                    Aktif
+                  </span>
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  1,516
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  ₺151,600
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827' }}>
+                  12.0%
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '100px', height: '8px', backgroundColor: '#F3F4F6', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: '88%', height: '100%', backgroundColor: '#10B981' }}></div>
+                    </div>
+                    <span style={{ fontSize: '12px', color: '#6B7280' }}>88%</span>
+                  </div>
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button style={{ padding: '4px 8px', backgroundColor: '#3B82F6', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      Detay
+                    </button>
+                    <button style={{ padding: '4px 8px', backgroundColor: '#F59E0B', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      Ayarlar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              
+              <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '8px', height: '8px', backgroundColor: '#10B981', borderRadius: '50%' }}></div>
+                    Migros
+                  </div>
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <span style={{ padding: '4px 8px', backgroundColor: '#10B981', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
+                    Aktif
+                  </span>
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  505
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                  ₺50,500
+                </td>
+                <td style={{ padding: '12px', fontSize: '14px', color: '#111827' }}>
+                  10.0%
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '100px', height: '8px', backgroundColor: '#F3F4F6', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: '95%', height: '100%', backgroundColor: '#10B981' }}></div>
+                    </div>
+                    <span style={{ fontSize: '12px', color: '#6B7280' }}>95%</span>
+                  </div>
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button style={{ padding: '4px 8px', backgroundColor: '#3B82F6', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      Detay
+                    </button>
+                    <button style={{ padding: '4px 8px', backgroundColor: '#F59E0B', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      Ayarlar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+          </div>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#FFFFFF', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+        }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+            Son Loglar
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px', fontFamily: 'monospace' }}>
+            <div style={{ padding: '8px', backgroundColor: '#F9FAFB', borderRadius: '4px' }}>
+              <span style={{ color: '#6B7280' }}>[2026-03-28 16:20:15]</span>
+              <span style={{ color: '#10B981', marginLeft: '8px' }}>INFO</span>
+              <span style={{ color: '#111827', marginLeft: '8px' }}>API request processed successfully</span>
+            </div>
+            <div style={{ padding: '8px', backgroundColor: '#F9FAFB', borderRadius: '4px' }}>
+              <span style={{ color: '#6B7280' }}>[2026-03-28 16:19:42]</span>
+              <span style={{ color: '#F59E0B', marginLeft: '8px' }}>WARN</span>
+              <span style={{ color: '#111827', marginLeft: '8px' }}>High memory usage detected</span>
+            </div>
+            <div style={{ padding: '8px', backgroundColor: '#F9FAFB', borderRadius: '4px' }}>
+              <span style={{ color: '#6B7280' }}>[2026-03-28 16:18:30]</span>
+              <span style={{ color: '#10B981', marginLeft: '8px' }}>INFO</span>
+              <span style={{ color: '#111827', marginLeft: '8px' }}>Database backup completed</span>
+            </div>
+            <div style={{ padding: '8px', backgroundColor: '#F9FAFB', borderRadius: '4px' }}>
+              <span style={{ color: '#6B7280' }}>[2026-03-28 16:17:15]</span>
+              <span style={{ color: '#EF4444', marginLeft: '8px' }}>ERROR</span>
+              <span style={{ color: '#111827', marginLeft: '8px' }}>Email service timeout</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ 
+        backgroundColor: '#FFFFFF', 
+        border: '1px solid #E5E7EB', 
+        borderRadius: '8px', 
+        padding: '24px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+            Performans Metrikleri
+          </h3>
+          <button style={{ 
+            padding: '8px 16px', 
+            backgroundColor: '#3B82F6', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '6px', 
+            fontSize: '14px',
+            cursor: 'pointer'
+          }}>
+            Yenile
+          </button>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '12px' }}>Response Time</h4>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10B981', marginBottom: '8px' }}>124ms</div>
+            <div style={{ width: '100%', height: '8px', backgroundColor: '#F3F4F6', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ width: '85%', height: '100%', backgroundColor: '#10B981' }}></div>
+            </div>
+            <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '8px' }}>Avg: 156ms</p>
+          </div>
+          
+          <div style={{ textAlign: 'center' }}>
+            <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '12px' }}>Throughput</h4>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#3B82F6', marginBottom: '8px' }}>1,245/s</div>
+            <div style={{ width: '100%', height: '8px', backgroundColor: '#F3F4F6', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ width: '75%', height: '100%', backgroundColor: '#3B82F6' }}></div>
+            </div>
+            <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '8px' }}>Peak: 1,890/s</p>
+          </div>
+          
+          <div style={{ textAlign: 'center' }}>
+            <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '12px' }}>Error Rate</h4>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10B981', marginBottom: '8px' }}>0.2%</div>
+            <div style={{ width: '100%', height: '8px', backgroundColor: '#F3F4F6', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ width: '2%', height: '100%', backgroundColor: '#10B981' }}></div>
+            </div>
+            <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '8px' }}>24 errors/hr</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <LayoutWithSidebar>
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<SimpleDashboard />} />
+        <Route path="/reports" element={<SimpleReports />} />
+        <Route path="/stock-alerts" element={<SimpleStockAlerts />} />
+        <Route path="/excess-codes" element={<SimpleExcessCodes />} />
+        <Route path="/orders" element={<SimpleOrders />} />
+        <Route path="/products" element={<SimpleProducts />} />
+        <Route path="/providers" element={<SimpleProviders />} />
+        <Route path="/channels" element={<SimpleChannels />} />
+        <Route path="/system-health" element={<SimpleSystemHealth />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </LayoutWithSidebar>
+  )
+}
+
+export default App

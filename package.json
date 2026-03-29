@@ -1,0 +1,22 @@
+{
+  "name": "omega",
+  "version": "1.0.0",
+  "description": "Omega Digital - Game Code Distribution System",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:cms\"",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:cms": "npm run dev --workspace=apps/cms",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "docker:dev": "docker-compose up -d",
+    "docker:prod": "docker-compose -f docker-compose.prod.yml up -d"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,168 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-bg-primary text-text-primary font-sans antialiased;
+    min-width: 1280px;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-white;
+    border-radius: 6px;
+  }
+  
+  .btn-primary {
+    @apply bg-accent text-white hover:bg-accent-hover;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-700 hover:bg-gray-200;
+  }
+  
+  .btn-outline {
+    @apply border border-border bg-transparent hover:bg-gray-50;
+  }
+  
+  .btn-ghost {
+    @apply hover:bg-gray-50;
+  }
+  
+  .btn-sm {
+    @apply h-9 px-3 text-xs;
+  }
+  
+  .btn-lg {
+    @apply h-11 px-8 text-base;
+  }
+  
+  .card {
+    @apply rounded-lg border border-border bg-surface p-6 shadow-card;
+  }
+  
+  .input {
+    @apply flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  
+  .label {
+    @apply text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
+  }
+  
+  .select {
+    @apply flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  
+  .textarea {
+    @apply flex min-h-[80px] w-full rounded-md border border-border bg-surface px-3 py-2 text-sm ring-offset-white placeholder:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  
+  .table {
+    @apply w-full caption-bottom text-sm;
+  }
+  
+  .table-header {
+    @apply text-xs text-text-secondary uppercase tracking-wider border-b border-border bg-gray-50;
+  }
+  
+  .table-row {
+    @apply border-b border-gray-100 hover:bg-gray-50;
+  }
+  
+  .table-head {
+    @apply px-6 py-3 font-medium;
+  }
+  
+  .table-cell {
+    @apply px-6 py-4 whitespace-nowrap;
+  }
+  
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .badge-success {
+    @apply bg-green-50 text-green-700;
+  }
+  
+  .badge-warning {
+    @apply bg-yellow-50 text-yellow-700;
+  }
+  
+  .badge-error {
+    @apply bg-red-50 text-red-700;
+  }
+  
+  .badge-info {
+    @apply bg-blue-50 text-blue-700;
+  }
+  
+  .skeleton {
+    @apply animate-pulse bg-gray-200 rounded;
+  }
+  
+  .sidebar {
+    @apply fixed inset-y-0 left-0 z-50 w-64 bg-bg-sidebar border-r border-border transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0;
+  }
+  
+  .sidebar-item {
+    @apply flex items-center px-6 py-3 text-sm font-medium rounded-md transition-colors text-gray-700 hover:bg-gray-50;
+  }
+  
+  .sidebar-item-active {
+    @apply bg-red-50 text-accent border-l-4 border-accent;
+  }
+  
+  .sidebar-section-title {
+    @apply text-xs text-gray-500 uppercase tracking-wider px-6 py-2 font-medium;
+  }
+  
+  .kpi-card {
+    @apply bg-surface border border-border rounded-lg p-6 shadow-card border-l-4 border-l-accent;
+  }
+  
+  .kpi-title {
+    @apply text-xs text-text-secondary uppercase tracking-wider mb-2;
+  }
+  
+  .kpi-value {
+    @apply text-2xl font-bold text-text-primary;
+  }
+  
+  .page-header {
+    @apply mb-8;
+  }
+  
+  .page-title {
+    @apply text-xl font-semibold text-text-primary mb-2;
+  }
+  
+  .page-subtitle {
+    @apply text-sm text-text-secondary;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-accent to-purple-500 bg-clip-text text-transparent;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
