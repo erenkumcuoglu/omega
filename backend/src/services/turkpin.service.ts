@@ -179,22 +179,31 @@ class TurkpinService {
         
         console.log(`[Turkpin] ${command} → Form Data:`, formData.toString())
         
-        const response = await axios.post(this.baseUrl, formData, {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'Omega-Digital/1.0'
-          },
-          timeout: 15000
-        })
+        try {
+          const response = await axios.post(this.baseUrl, formData, {
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'User-Agent': 'Omega-Digital/1.0'
+            },
+            timeout: 15000
+          })
 
-        const latency = Date.now() - startTime
-        logger.info(`[Turkpin] ${command} → ${latency}ms → OK`)
-
-        // Parse XML response
-        const parsedResponse = this.parseXML(response.data)
-        this.handleTurkpinError(parsedResponse)
-        
-        return parsedResponse
+          logger.info(`[Turkpin] ${command} → ${response.status} → ${response.statusText}`)
+          logger.info('[Turkpin] Raw Response:', response.data)
+          
+          const parsedResponse = this.parseXML(response.data)
+          this.handleTurkpinError(parsedResponse)
+          
+          return parsedResponse
+        } catch (error: any) {
+          logger.error(`[Turkpin] ${command} → ${error.response?.status || 'NO_STATUS'} → ${error.message}`)
+          
+          if (error.response?.data) {
+            logger.error('[Turkpin] Error Response:', error.response.data)
+          }
+          
+          throw error
+        }
 
       } catch (error: any) {
         lastError = error
@@ -246,96 +255,63 @@ class TurkpinService {
   }
 
   async getEpinList(): Promise<EpinCategory[]> {
-    // Try different commands
-    const commands = ['epinList', 'epin_list', 'listEpins', 'getEpins']
-    
-    for (const cmd of commands) {
-      try {
-        logger.info(`[Turkpin] Trying command: ${cmd}`)
-        const response = await this.makeRequest(cmd)
-        logger.info(`[Turkpin] Command ${cmd} response:`, JSON.stringify(response, null, 2))
+    try {
+      // Sandbox'da sadece epinList komutu çalışıyor
+      const response = await this.makeRequest('epinList')
+      
+      logger.info('[Turkpin] epinList response:', JSON.stringify(response, null, 2))
+      
+      // Sandbox response formatını parse et
+      if (response.result && response.result.category) {
+        const categories = Array.isArray(response.result.category) 
+          ? response.result.category 
+          : [response.result.category]
         
-        const epins = response.epins?.epin || response.epin || response.epins || []
+        const result = categories.map((cat: any) => ({
+          id: cat.id,
+          name: cat.name,
+          productCount: 0 // Sandbox'ta bu bilgi yok
+        }))
         
-        if (epins && epins.length > 0) {
-          const categories = Array.isArray(epins) ? epins : [epins]
-          return categories.map((epin: any) => ({
-            id: epin.id || epin.epin_id || epin.ID,
-            name: epin.name || epin.epin_name || epin.NAME || epin.title
-          }))
-        }
-      } catch (error) {
-        logger.warn(`[Turkpin] Command ${cmd} failed:`, error)
-        continue
+        logger.info('[Turkpin] Parsed categories:', JSON.stringify(result, null, 2))
+        return result
       }
+      
+      return []
+    } catch (error) {
+      logger.error('[Turkpin] getEpinList error:', error)
+      throw error
     }
-    
-    logger.warn('[Turkpin] No epin categories found with any command')
-    return []
   }
 
   async getProducts(epinId: string): Promise<TurkpinProduct[]> {
-    const response = await this.makeRequest('epinProducts', { epin_id: epinId })
-    const products = response.products?.product || []
-
-    if (!Array.isArray(products)) {
-      return [products].map((product: any) => ({
-        id: product.id || product.product_id,
-        name: product.name || product.product_name,
-        stock: parseInt(product.stock || 0),
-        minOrder: parseInt(product.min_order || 1),
-        maxOrder: parseInt(product.max_order || 999),
-        price: parseFloat(product.price || 0)
-      }))
-    }
-
-    const productList = products.map((product: any) => ({
-      id: product.id || product.product_id,
-      name: product.name || product.product_name,
-      stock: parseInt(product.stock || 0),
-      minOrder: parseInt(product.min_order || 1),
-      maxOrder: parseInt(product.max_order || 999),
-      price: parseFloat(product.price || 0)
-    }))
-
-    logger.info(`[Turkpin] getProducts(epinId: ${epinId}) → ${productList.length} ürün`)
-    return productList
-  }
-
-  async createOrder(
-    epinId: string,
-    productId: string,
-    qty: number
-  ): Promise<OrderResult> {
-    const response = await this.makeRequest('epinOrder', {
-      epin_id: epinId,
-      product_id: productId,
-      qty: qty.toString()
-    })
-
-    const result = response.result || response
-
-    // Parse codes if they exist
-    let codes: Array<{ code: string, desc: string }> = []
-    if (result.codes) {
-      if (Array.isArray(result.codes.code)) {
-        codes = result.codes.code.map((codeItem: any) => ({
-          code: codeItem.code || codeItem,
-          desc: codeItem.desc || ''
+    try {
+      // Sandbox'da epinProducts komutunu kullan
+      const response = await this.makeRequest('epinProducts', { epinId })
+      
+      logger.info(`[Turkpin] epinProducts response for ${epinId}:`, JSON.stringify(response, null, 2))
+      
+      // Sandbox response formatını parse et
+      if (response.result && response.result.product) {
+        const products = Array.isArray(response.result.product) 
+          ? response.result.product 
+          : [response.result.product]
+        
+        return products.map((product: any) => ({
+          id: product.id,
+          name: product.name,
+          price: parseFloat(product.price || 0),
+          stock: parseInt(product.stock || 0),
+          minOrder: parseInt(product.min_order || 1),
+          maxOrder: parseInt(product.max_order || 0),
+          taxType: product.taxType || []
         }))
-      } else {
-        codes = [{
-          code: result.codes.code,
-          desc: result.codes.desc || ''
-        }]
       }
-    }
-
-    return {
-      status: result.status === 'Success' ? 'Success' : 'Error',
-      orderNo: result.orderNo || result.order_no || '',
-      totalAmount: parseFloat(result.totalAmount || result.total_amount || 0),
-      codes
+      
+      return []
+    } catch (error) {
+      logger.error('[Turkpin] getProducts error:', error)
+      throw error
     }
   }
 

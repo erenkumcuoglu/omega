@@ -10,5 +10,11 @@ export const config = {
     password: process.env.TURKPIN_PASSWORD || '',
     apiUrl: process.env.TURKPIN_API_URL || 'https://api.turkpin.com'
   },
-  logLevel: process.env.LOG_LEVEL || 'debug'
+  logLevel: process.env.LOG_LEVEL || 'debug',
+  jwt: {
+    secret: process.env.JWT_SECRET || 'default-secret-change-in-production',
+    refreshSecret: process.env.JWT_REFRESH_SECRET || 'default-refresh-secret-change-in-production',
+    expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
+  }
 }

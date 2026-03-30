@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Provider {
+  id             String    @id @default(cuid())
+  name           String
+  type           String    // "API" | "STOCK"
+  isActive       Boolean   @default(true)
+  apiUsername    String?
+  apiPasswordEnc String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  products       Product[]
+  orders         Order[]
+}
+
+model SalesChannel {
+  id            String   @id @default(cuid())
+  name          String
+  countryCode   String?
+  commissionPct Decimal  @db.Decimal(5,2)
+  isActive      Boolean  @default(true)
+  webhookIps    String[]
+  createdAt     DateTime @default(now())
+  orders        Order[]
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  providerId    String
+  provider      Provider @relation(fields: [providerId], references: [id])
+  externalId    String
+  name          String
+  sku           String   @unique
+  purchasePrice Decimal  @db.Decimal(10,4)
+  sellingPrice  Decimal  @db.Decimal(10,4)
+  marginPct     Decimal  @db.Decimal(5,2) @default(0)
+  stock         Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  orders        Order[]
+}
+
+model Order {
+  id               String       @id @default(cuid())
+  idempotencyKey   String       @unique
+  channelId        String
+  channel          SalesChannel @relation(fields: [channelId], references: [id])
+  providerId       String
+  provider         Provider     @relation(fields: [providerId], references: [id])
+  productId        String
+  product          Product      @relation(fields: [productId], references: [id])
+  customerName     String?
+  sellingPrice     Decimal      @db.Decimal(10,4)
+  purchasePrice    Decimal      @db.Decimal(10,4)
+  commissionPct    Decimal      @db.Decimal(5,2)
+  commissionAmount Decimal      @db.Decimal(10,4)
+  profit           Decimal      @db.Decimal(10,4)
+  status           String       @default("PENDING")
+  digitalCodeEnc   String?
+  providerOrderNo  String?
+  customerEmail    String?
+  orderedAt        DateTime
+  fulfilledAt      DateTime?
+  createdAt        DateTime     @default(now())
+  currency         String?      @default("TRY")
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  passwordHash        String
+  role                String    @default("OPERATIONS")
+  isActive            Boolean   @default(true)
+  forcePasswordChange Boolean   @default(false)
+  lastLoginAt         DateTime?
+  createdAt           DateTime  @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  meta      Json     @default("{}")
+  ip        String
+  createdAt DateTime @default(now())
+}
