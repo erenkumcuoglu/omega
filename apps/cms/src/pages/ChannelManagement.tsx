@@ -49,54 +49,8 @@ export function ChannelManagement() {
   const { data: channels, isLoading } = useQuery({
     queryKey: ['channels'],
     queryFn: async () => {
-      // Mock channels data - in real app this would come from API
-      const mockChannels: Channel[] = [
-        {
-          id: '1',
-          name: 'Trendyol',
-          commissionPct: 15,
-          webhookIps: ['127.0.0.1', '192.168.1.100'],
-          countryCode: null,
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          recentOrders: 150,
-          recentRevenue: 15000
-        },
-        {
-          id: '2',
-          name: 'Ozan',
-          commissionPct: 8,
-          webhookIps: ['127.0.0.1', '192.168.1.101'],
-          countryCode: null,
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          recentOrders: 75,
-          recentRevenue: 6000
-        },
-        {
-          id: '3',
-          name: 'Daraz PK',
-          commissionPct: 12,
-          webhookIps: ['127.0.0.1', '192.168.1.102'],
-          countryCode: 'PK',
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          recentOrders: 45,
-          recentRevenue: 3600
-        },
-        {
-          id: '4',
-          name: 'Daraz BD',
-          commissionPct: 10,
-          webhookIps: ['127.0.0.1', '192.168.1.103'],
-          countryCode: 'BD',
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          recentOrders: 30,
-          recentRevenue: 2400
-        }
-      ]
-      return mockChannels
+      const response = await api.get('/channels')
+      return response.data as Channel[]
     }
   })
 
@@ -120,7 +74,7 @@ export function ChannelManagement() {
   // Toggle channel status mutation
   const toggleChannelMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      const response = await api.patch(`/channels/${id}`, { isActive })
+      const response = await api.patch(`/channels/${id}/status`, { isActive })
       return response.data
     },
     onSuccess: () => {

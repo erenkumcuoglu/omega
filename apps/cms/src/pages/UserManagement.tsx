@@ -8,8 +8,9 @@ interface User {
   id: string
   email: string
   name: string
-  role: 'ADMIN' | 'OPERATIONS' | 'ACCOUNTING' | 'PRICING'
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'OPERATIONS' | 'ACCOUNTING' | 'PRICING'
   isActive: boolean
+  forcePasswordChange: boolean
   lastLoginAt: string
   createdAt: string
 }
@@ -17,14 +18,15 @@ interface User {
 interface CreateUserRequest {
   email: string
   password: string
-  role: 'ADMIN' | 'OPERATIONS' | 'ACCOUNTING' | 'PRICING'
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'OPERATIONS' | 'ACCOUNTING' | 'PRICING'
   name: string
 }
 
 interface UpdateUserRequest {
-  role?: 'ADMIN' | 'OPERATIONS' | 'ACCOUNTING' | 'PRICING'
+  role?: 'SUPER_ADMIN' | 'ADMIN' | 'OPERATIONS' | 'ACCOUNTING' | 'PRICING'
   isActive?: boolean
   name?: string
+  forcePasswordChange?: boolean
 }
 
 export function UserManagement() {

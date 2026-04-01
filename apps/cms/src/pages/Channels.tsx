@@ -27,7 +27,7 @@ export function Channels() {
 
   const updateCommissionMutation = useMutation({
     mutationFn: async ({ channelId, commissionPct }: { channelId: string; commissionPct: number }) => {
-      await api.patch(`/channels/${channelId}/commission`, { commissionPct })
+      await api.patch(`/channels/${channelId}`, { commissionPct })
     },
     onSuccess: () => {
       toast.success('Komisyon güncellendi')

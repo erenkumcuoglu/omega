@@ -48,6 +48,29 @@ app.post('/', async (req, res) => {
     if (!cmd) {
       return res.send(errorResponses.invalidCommand)
     }
+  }
+})
+
+// API.php endpoint'i için de aynı handler
+app.post('/api.php', async (req, res) => {
+  try {
+    const startTime = Date.now()
+    
+    // DATA parametresini parse et
+    const data = req.body.DATA
+    if (!data) {
+      return res.status(400).send('DATA parameter required')
+    }
+
+    // XML'i parse et (basit parse)
+    const params = parseXMLData(data)
+    const cmd = params.cmd
+    const username = params.username
+    const password = params.password
+
+    if (!cmd) {
+      return res.send(errorResponses.invalidCommand)
+    }
 
     // Log the request
     const logData = Object.entries(params)

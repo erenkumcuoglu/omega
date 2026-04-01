@@ -187,6 +187,7 @@ export function Orders() {
             <option value="trendyol">Trendyol</option>
             <option value="hepsiburada">Hepsiburada</option>
             <option value="ozan">Ozan</option>
+            <option value="ozon">Ozon</option>
           </select>
 
           <div className="flex items-center text-sm text-textSecondary">

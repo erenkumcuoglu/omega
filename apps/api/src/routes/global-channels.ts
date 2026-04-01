@@ -1,12 +1,51 @@
 import { Router, Request, Response } from 'express'
 import { z } from 'zod'
+import { PrismaClient } from '@prisma/client'
 import pino from 'pino'
 
 const router: Router = Router()
+const prisma = new PrismaClient()
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' })
 
+const defaultChannels: Array<{
+  name: string
+  commissionPct: number
+  webhookIps: string[]
+  countryCode?: string
+}> = [
+  { name: 'Trendyol', commissionPct: 15, webhookIps: ['127.0.0.1'] },
+  { name: 'Hepsiburada', commissionPct: 12, webhookIps: ['127.0.0.1'] },
+  { name: 'Ozan', commissionPct: 8, webhookIps: ['127.0.0.1'] },
+  { name: 'Ozon', commissionPct: 18, webhookIps: ['127.0.0.1'] }
+]
+
+const ensureDefaultChannels = async () => {
+  for (const channel of defaultChannels) {
+    const existing = await prisma.salesChannel.findFirst({
+      where: {
+        name: {
+          equals: channel.name,
+          mode: 'insensitive'
+        }
+      }
+    })
+
+    if (!existing) {
+      await prisma.salesChannel.create({
+        data: {
+          name: channel.name,
+          commissionPct: channel.commissionPct,
+          webhookIps: channel.webhookIps,
+          countryCode: channel.countryCode,
+          isActive: true
+        }
+      })
+    }
+  }
+}
+
 // Mock orders storage (in real app this would go to database)
-const mockGlobalOrders = [];
+const mockGlobalOrders: any[] = [];
 
 // Generic webhook validation middleware
 const webhookValidation = (channelName: string, allowedIPs: string[], secret: string) => {
@@ -294,6 +333,35 @@ router.post('/webhooks/ozon',
 
 // Channel Management Endpoints
 
+// GET /channels - List all sales channels
+router.get('/channels', async (req: Request, res: Response) => {
+  try {
+    await ensureDefaultChannels()
+
+    const channels = await prisma.salesChannel.findMany({
+      orderBy: { name: 'asc' }
+    })
+    res.json(channels)
+  } catch (error) {
+    logger.error('Error fetching channels:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// PATCH /channels/:id - Update channel commission
+router.patch('/channels/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const { commissionPct } = req.body
+    if (commissionPct === undefined) return res.status(400).json({ error: 'commissionPct required' })
+    const updated = await prisma.salesChannel.update({ where: { id }, data: { commissionPct } })
+    res.json(updated)
+  } catch (error) {
+    logger.error('Error updating channel:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 // POST /channels - Create new channel
 router.post('/channels', async (req: Request, res: Response) => {
   try {
@@ -305,17 +373,32 @@ router.post('/channels', async (req: Request, res: Response) => {
     });
     
     const channelData = channelSchema.parse(req.body);
-    
-    // Mock channel creation
-    const newChannel = {
-      id: `channel_${Date.now()}`,
-      ...channelData,
-      isActive: true,
-      createdAt: new Date().toISOString()
-    };
-    
+
+    const existing = await prisma.salesChannel.findFirst({
+      where: {
+        name: {
+          equals: channelData.name,
+          mode: 'insensitive'
+        }
+      }
+    })
+
+    if (existing) {
+      return res.status(409).json({ error: 'Channel already exists' })
+    }
+
+    const newChannel = await prisma.salesChannel.create({
+      data: {
+        name: channelData.name,
+        commissionPct: channelData.commissionPct,
+        webhookIps: channelData.webhookIps,
+        countryCode: channelData.countryCode,
+        isActive: true
+      }
+    })
+
     logger.info('New channel created', { channelId: newChannel.id, name: newChannel.name });
-    
+
     res.status(201).json(newChannel);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -334,31 +417,47 @@ router.post('/channels', async (req: Request, res: Response) => {
 router.get('/channels/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    
-    // Mock channel data
-    const channel = {
-      id,
-      name: `Channel ${id}`,
-      commissionPct: 15.0,
-      webhookIps: ['127.0.0.1', '192.168.1.100'],
-      countryCode: id.includes('daraz') ? 'PK' : null,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      recentOrders: mockGlobalOrders.filter(order => 
-        order.channelName.includes(id) && 
-        new Date(order.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-      ).length,
-      recentRevenue: mockGlobalOrders
-        .filter(order => order.channelName.includes(id))
-        .reduce((sum, order) => sum + order.sellingPrice, 0)
-    };
-    
+
+    const channel = await prisma.salesChannel.findUnique({
+      where: { id }
+    })
+
+    if (!channel) {
+      return res.status(404).json({ error: 'Channel not found' })
+    }
+
     res.json(channel);
   } catch (error) {
     logger.error('Error getting channel details:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// PATCH /channels/:id/status - Toggle active/passive status
+router.patch('/channels/:id/status', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const schema = z.object({ isActive: z.boolean() })
+    const { isActive } = schema.parse(req.body)
+
+    const updated = await prisma.salesChannel.update({
+      where: { id },
+      data: { isActive }
+    })
+
+    res.json(updated)
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        error: 'Validation error',
+        details: error.errors
+      })
+    }
+
+    logger.error('Error updating channel status:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
 
 // POST /channels/:id/webhook-test - Test webhook
 router.post('/channels/:id/webhook-test', async (req: Request, res: Response) => {

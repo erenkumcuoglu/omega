@@ -48,6 +48,16 @@ model Product {
   orders        Order[]
 }
 
+model ProductSync {
+  id              String   @id @default(cuid())
+  totalCategories Int      @default(0)
+  totalProducts   Int      @default(0)
+  syncData        Json     // Senkronize edilen ürünler ve kategoriler
+  isActive        Boolean  @default(true) // En son senkronizasyon mu?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
 model Order {
   id               String       @id @default(cuid())
   idempotencyKey   String       @unique
@@ -76,17 +86,37 @@ model Order {
 model User {
   id                  String    @id @default(cuid())
   email               String    @unique
+  name                String?
   passwordHash        String
   role                String    @default("OPERATIONS")
   isActive            Boolean   @default(true)
   forcePasswordChange Boolean   @default(false)
   lastLoginAt         DateTime?
   createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  auditLogs           AuditLog[]
+}
+
+model SelectedProduct {
+  id            String   @id @default(cuid())
+  productId     String   @unique @map("product_id")
+  epinId        String   @map("epin_id")
+  epinName      String   @map("epin_name")
+  productName   String   @map("product_name")
+  purchasePrice Decimal  @db.Decimal(10,4) @map("purchase_price")
+  sellingPrice  Decimal  @db.Decimal(10,4) @map("selling_price")
+  marginPct     Decimal  @db.Decimal(5,2) @default(15) @map("margin_pct")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("selected_products")
 }
 
 model AuditLog {
   id        String   @id @default(cuid())
   userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
   action    String
   entity    String
   entityId  String?

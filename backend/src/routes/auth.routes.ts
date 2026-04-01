@@ -136,4 +136,34 @@ router.post('/logout', async (req: Request, res: Response): Promise<void> => {
   }
 })
 
+// GET /api/auth/validate
+router.get('/validate', async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Get token from header or cookie
+    const token = req.headers.authorization?.substring(7) || req.cookies?.omega_access_token
+    
+    if (!token) {
+      res.status(401).json({
+        success: false,
+        error: 'Token required'
+      })
+      return
+    }
+    
+    // Validate token
+    const result = await authService.validate(token)
+    
+    res.json({
+      success: true,
+      data: result
+    })
+  } catch (error: any) {
+    logger.error('Token validation error:', error)
+    res.status(401).json({
+      success: false,
+      error: error.message || 'Invalid token'
+    })
+  }
+})
+
 export default router

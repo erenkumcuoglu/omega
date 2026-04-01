@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import pino from 'pino';
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
@@ -32,21 +32,21 @@ if (process.env.NODE_ENV === 'development') {
   globalThis.__prisma = prisma;
 }
 
-prisma.$on('query', (e) => {
+(prisma as any).$on('query', (e: any) => {
   logger.debug('Query: ' + e.query);
-  logger.debug('Params: ' + e.params);
+  logger.debug('Params: ' + JSON.stringify(e.params));
   logger.debug('Duration: ' + e.duration + 'ms');
 });
 
-prisma.$on('error', (e) => {
+(prisma as any).$on('error', (e: any) => {
   logger.error('Database error:', e);
 });
 
-prisma.$on('info', (e) => {
+(prisma as any).$on('info', (e: any) => {
   logger.info('Database info:', e);
 });
 
-prisma.$on('warn', (e) => {
+(prisma as any).$on('warn', (e: any) => {
   logger.warn('Database warning:', e);
 });
 

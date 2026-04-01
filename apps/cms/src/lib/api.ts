@@ -1,7 +1,20 @@
 import axios from 'axios'
 
-// Use backend URL from environment
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003'
+// Use VITE_API_URL env var if set, otherwise use /api (proxied through nginx)
+const rawApiBaseUrl = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.trim()
+
+const normalizeApiBaseUrl = (value?: string) => {
+  if (!value) return '/api'
+
+  const sanitized = value.replace(/\/$/, '')
+  if (sanitized === '/api' || sanitized.endsWith('/api')) {
+    return sanitized
+  }
+
+  return `${sanitized}/api`
+}
+
+const API_BASE_URL = normalizeApiBaseUrl(rawApiBaseUrl)
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

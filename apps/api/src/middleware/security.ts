@@ -31,11 +31,8 @@ export const createRateLimit = (config: typeof RATE_LIMITS[keyof typeof RATE_LIM
       }
       return `ip:${getClientIp(req)}`;
     },
-    store: {
-      type: 'redis',
-      sendCommand: (...args: string[]) => redis.call(...args),
-    },
-    onLimitReached: async (req: Request) => {
+    // Fallback to in-memory store for rate limiting in this environment
+    handler: async (req: Request, res: Response) => {
       await logAuditEvent({
         action: AuditAction.RATE_LIMIT_HIT,
         entity: 'RateLimit',
@@ -46,6 +43,8 @@ export const createRateLimit = (config: typeof RATE_LIMITS[keyof typeof RATE_LIM
           userAgent: req.get('User-Agent')
         }
       });
+
+      res.status(429).json({ error: 'Too many requests' });
     }
   });
 };
@@ -54,8 +53,13 @@ export const createRateLimit = (config: typeof RATE_LIMITS[keyof typeof RATE_LIM
 export const ipWhitelist = (allowedIps: string[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     const clientIp = getClientIp(req);
+    const normalized = allowedIps.map((ip) => ip.trim()).filter(Boolean);
+
+    if (normalized.includes('*') || normalized.includes('sandbox')) {
+      return next();
+    }
     
-    if (!allowedIps.includes(clientIp)) {
+    if (!normalized.includes(clientIp)) {
       await logAuditEvent({
         action: AuditAction.WEBHOOK_BLOCKED,
         entity: 'Webhook',
@@ -83,10 +87,15 @@ export const ipWhitelist = (allowedIps: string[]) => {
   };
 };
 
-// HMAC verification middleware
-export const hmacVerify = (secret: string) => {
+export const hmacVerify = (secret: string, signatureHeader: string = 'x-signature') => {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const signature = req.headers['x-signature'] as string;
+    if (!secret) {
+      return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        error: 'Webhook signature secret is not configured'
+      });
+    }
+
+    const signature = req.headers[signatureHeader] as string;
     const payload = JSON.stringify(req.body);
 
     if (!signature) {
@@ -128,7 +137,7 @@ export const hmacVerify = (secret: string) => {
       });
 
       logger.warn('Webhook blocked - Invalid signature', { 
-        ip: getClientIp(), 
+        ip: getClientIp(req), 
         endpoint: req.path 
       });
 
@@ -277,7 +286,7 @@ declare global {
         id: string;
         email: string;
         role: string;
-        lastLoginAt?: Date;
+        lastLoginAt?: Date | null;
       };
     }
   }

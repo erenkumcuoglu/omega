@@ -4,7 +4,7 @@ import { validateWebhook } from '../middleware/validation';
 import { createRateLimit, ipWhitelist, hmacVerify } from '../middleware/security';
 import { RATE_LIMITS, HTTP_STATUS } from '@omega/shared';
 
-const router = Router();
+const router: Router = Router();
 const orderFulfillment = OrderFulfillmentService.getInstance();
 
 // Apply webhook-specific rate limiting
@@ -14,11 +14,20 @@ router.use(createRateLimit(RATE_LIMITS.WEBHOOKS));
 router.post('/trendyol', 
   validateWebhook,
   ipWhitelist(process.env.TRENDYOL_WEBHOOK_IPS?.split(',') || []),
-  hmacVerify(process.env.TRENDYOL_WEBHOOK_SECRET!),
+  hmacVerify(process.env.TRENDYOL_WEBHOOK_SECRET!, process.env.TRENDYOL_SIGNATURE_HEADER || 'x-trendyol-signature'),
   async (req: Request, res: Response) => {
     try {
+      const normalizedPayload = {
+        ...req.body,
+        channel: 'trendyol',
+        packageId: req.body.packageId || req.body.shipmentPackageId || req.body.package?.id,
+        lineItemId: req.body.lineItemId || req.body.orderLineItemId,
+        customerPhone: req.body.customerPhone || req.body.phone || req.body.customer?.phone,
+        trackingInfo: req.body.trackingInfo || req.body.customerPhone || req.body.phone
+      };
+
       await orderFulfillment.processWebhookOrder({
-        payload: req.body,
+        payload: normalizedPayload,
         channelName: 'trendyol',
         clientIp: req.ip || 'unknown'
       });

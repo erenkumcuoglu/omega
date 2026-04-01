@@ -8,10 +8,15 @@ import { prisma } from './config/database';
 import { requestId } from './middleware/security';
 import { authRouter } from './routes/auth';
 import { webhooksRouter } from './routes/webhooks';
+import { productsRouter } from './routes/products';
+import { globalChannelsRouter } from './routes/global-channels';
+import { trendyolRouter } from './routes/trendyol';
+import { hepsiburadaRouter } from './routes/hepsiburada';
+import { ozonRouter } from './routes/ozon';
 import { HTTP_STATUS } from '@omega/shared';
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
-const app = express();
+const app: express.Application = express();
 
 // Trust proxy for Nginx reverse proxy
 app.set('trust proxy', 1);
@@ -76,6 +81,11 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/auth', authRouter);
 app.use('/webhooks', webhooksRouter);
+app.use('/products', productsRouter);
+app.use('/trendyol', trendyolRouter);
+app.use('/hepsiburada', hepsiburadaRouter);
+app.use('/ozon', ozonRouter);
+app.use('/', globalChannelsRouter);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -133,8 +143,8 @@ const gracefulShutdown = async (signal: string) => {
 };
 
 // Start server
-const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, '127.0.0.1', () => {
+const PORT = parseInt(process.env.PORT || '3000', 10);
+const server = app.listen(PORT, '0.0.0.0', () => {
   logger.info(`Server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
@@ -152,7 +162,8 @@ process.on('uncaughtException', (error: Error) => {
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason: any) => {
   logger.error('Unhandled rejection:', reason);
-  process.exit(1);
+  // Do not exit immediately in production to keep service available.
+  // Ideally, evaluate whether to restart in orchestrator (Kubernetes/PM2) after logging.
 });
 
 export { app, server };

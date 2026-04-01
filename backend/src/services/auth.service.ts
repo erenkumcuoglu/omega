@@ -125,6 +125,36 @@ export class AuthService {
     return jwt.sign(payload, this.jwtRefreshSecret, options)
   }
 
+  async validate(token: string): Promise<{ id: string; email: string; role: string; name: string }> {
+    try {
+      // 1. Token'ı doğrula
+      const decoded = jwt.verify(token, this.jwtSecret) as any
+      if (decoded.type !== 'access') {
+        throw new Error('Invalid access token')
+      }
+
+      // 2. DB'den user'ı kontrol et
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.sub },
+        select: { id: true, email: true, role: true, name: true, isActive: true }
+      })
+
+      if (!user || !user.isActive) {
+        throw new Error('User not found or inactive')
+      }
+
+      return {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name
+      }
+    } catch (error) {
+      logger.error('Token validation error:', error)
+      throw new Error('Invalid token')
+    }
+  }
+
   private async logAudit(
     userId: string | null,
     action: string,

@@ -1,4 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { AuthProvider } from './contexts/AuthContext'
+import { ProtectedRoute } from './components/ProtectedRoute'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { 
   Home, 
@@ -13,6 +15,9 @@ import { ToggleSwitch, MonthFilter, formatCurrency, DateRangeFilter, Pagination,
 import { mockProviders, mockChannels, months, activeMonth, years, activeYear, mockOrders, mockProducts } from './mock/data'
 import api from './lib/api'
 import { SystemHealth } from './pages/SystemHealth'
+import { ExcessCodes } from './pages/ExcessCodes'
+import ProductManagement from './pages/ProductManagement'
+import Products from './pages/Products'
 
 // Layout with Sidebar
 function LayoutWithSidebar({ children }: { children: React.ReactNode }) {
@@ -24,6 +29,7 @@ function LayoutWithSidebar({ children }: { children: React.ReactNode }) {
     { name: 'Ana Sayfa', href: '/dashboard', icon: Home },
     { name: 'Siparişler', href: '/orders', icon: ShoppingCart },
     { name: 'Ürünler', href: '/products', icon: Package },
+    { name: 'Ürün Yönetimi', href: '/product-management', icon: Package },
     { name: 'Distribütörler', href: '/providers', icon: Server },
     { name: 'Kanallar', href: '/channels', icon: Users },
     
@@ -488,6 +494,7 @@ function SimpleDashboard() {
           </table>
         </div>
       </div>
+
     </div>
   )
 }
@@ -644,6 +651,7 @@ function SimpleStockAlerts() {
           </div>
         </div>
       </div>
+
     </div>
   )
 }
@@ -1208,6 +1216,8 @@ function SimpleProducts() {
     productName: ''
   })
   const [isSyncing, setIsSyncing] = useState(false)
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
+  const [syncSummary, setSyncSummary] = useState<any>(null)
   
   // Seçili distribütörün ürünlerini al
   const currentProducts = products[selectedProvider] || []
@@ -1304,6 +1314,10 @@ function SimpleProducts() {
           turkpin: turkpinProducts
         }))
         
+        // Cache bilgilerini kaydet
+        setLastSyncTime(new Date().toISOString())
+        setSyncSummary(data.data.summary)
+        
         // Show success message
         alert(`${data.data.summary.totalProducts} ürün senkronize edildi`)
       } else {
@@ -1384,6 +1398,47 @@ function SimpleProducts() {
           <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Tükendi</p>
         </div>
       </div>
+
+      {/* Cache Bilgisi */}
+      {lastSyncTime && (
+        <div style={{ 
+          backgroundColor: '#F0FDF4', 
+          border: '1px solid #22C55E', 
+          borderRadius: '8px', 
+          padding: '16px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+          marginBottom: '24px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#166534', marginBottom: '4px' }}>
+                Son Senkronizasyon
+              </h4>
+              <p style={{ fontSize: '12px', color: '#15803D', margin: 0 }}>
+                {new Date(lastSyncTime).toLocaleString('tr-TR')} - {syncSummary?.totalProducts || 0} ürün
+              </p>
+              <p style={{ fontSize: '12px', color: '#6B7280', margin: '4px 0 0 0' }}>
+                Veriler cache'den geliyor, tekrar senkronize etmenize gerek yok
+              </p>
+            </div>
+            <button
+              onClick={() => window.location.href = '/product-management'}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#22C55E',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              Ürün Yönetimi
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Distribütör Seçimi */}
       <div style={{ 
@@ -1757,6 +1812,136 @@ function SimpleProviders() {
 
 // Simple Channels
 function SimpleChannels() {
+  const [channelsData, setChannelsData] = useState<Array<{
+    id: string
+    name: string
+    countryCode?: string | null
+    isActive: boolean
+    commissionPct: number
+  }> | null>(null)
+  const [busyChannelId, setBusyChannelId] = useState<string | null>(null)
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false)
+  const [webhookModalOpen, setWebhookModalOpen] = useState(false)
+  const [selectedChannel, setSelectedChannel] = useState<{ id: string; name: string } | null>(null)
+  const [detailData, setDetailData] = useState<any | null>(null)
+  const [settingsCommission, setSettingsCommission] = useState('')
+  const [webhookData, setWebhookData] = useState<any | null>(null)
+  const [modalError, setModalError] = useState('')
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadChannels = async () => {
+      try {
+        const response = await api.get('/channels')
+        const rows = Array.isArray(response.data)
+          ? response.data.map((row: any) => ({
+              id: row.id,
+              name: row.name,
+              countryCode: row.countryCode ?? null,
+              isActive: Boolean(row.isActive),
+              commissionPct: Number(row.commissionPct ?? 0)
+            }))
+          : []
+
+        if (mounted) {
+          setChannelsData(rows)
+        }
+      } catch {
+        if (mounted) {
+          setChannelsData([])
+        }
+      }
+    }
+
+    loadChannels()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const list = channelsData ?? []
+  const totalChannels = list.length
+  const activeChannels = list.filter((ch) => ch.isActive).length
+  const topChannel = list[0]?.name || ''
+
+  const updateLocalChannel = (id: string, patch: Partial<{ isActive: boolean; commissionPct: number }>) => {
+    setChannelsData((prev) => {
+      if (!prev) return prev
+      return prev.map((row) => (row.id === id ? { ...row, ...patch } : row))
+    })
+  }
+
+  const handleToggleStatus = async (channel: { id: string; name: string; isActive: boolean }) => {
+    const next = !channel.isActive
+    setBusyChannelId(channel.id)
+    try {
+      await api.patch(`/channels/${channel.id}/status`, { isActive: next })
+      updateLocalChannel(channel.id, { isActive: next })
+    } catch {
+      window.alert('Durum güncellenemedi')
+    } finally {
+      setBusyChannelId(null)
+    }
+  }
+
+  const handleDetails = async (channelId: string) => {
+    setModalError('')
+    setDetailData(null)
+    setDetailModalOpen(true)
+    try {
+      const response = await api.get(`/channels/${channelId}`)
+      setDetailData(response.data)
+    } catch {
+      setModalError('Kanal detayı alınamadı')
+    }
+  }
+
+  const handleSettings = async (channel: { id: string; name: string; commissionPct: number }) => {
+    setModalError('')
+    setSelectedChannel({ id: channel.id, name: channel.name })
+    setSettingsCommission(String(channel.commissionPct))
+    setSettingsModalOpen(true)
+  }
+
+  const submitSettings = async () => {
+    if (!selectedChannel) return
+    const value = Number(settingsCommission)
+    if (!Number.isFinite(value) || value < 0 || value > 100) {
+      setModalError('Lütfen 0-100 arasında geçerli bir komisyon yüzdesi girin')
+      return
+    }
+
+    setBusyChannelId(selectedChannel.id)
+    try {
+      await api.patch(`/channels/${selectedChannel.id}`, { commissionPct: value })
+      updateLocalChannel(selectedChannel.id, { commissionPct: value })
+      setSettingsModalOpen(false)
+    } catch {
+      setModalError('Komisyon güncellenemedi')
+    } finally {
+      setBusyChannelId(null)
+    }
+  }
+
+  const handleWebhookTest = async (channel: { id: string; name: string }) => {
+    setModalError('')
+    setWebhookData(null)
+    setSelectedChannel({ id: channel.id, name: channel.name })
+    setWebhookModalOpen(true)
+    setBusyChannelId(channel.id)
+    try {
+      const response = await api.post(`/channels/${channel.id}/webhook-test`)
+      setWebhookData(response.data)
+    } catch {
+      setModalError('Webhook testi başarısız')
+    } finally {
+      setBusyChannelId(null)
+    }
+  }
+
   return (
     <div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '24px' }}>
@@ -1770,8 +1955,8 @@ function SimpleChannels() {
           <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
             Toplam Kanal
           </p>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>5</p>
-          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Aktif</p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>{totalChannels}</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>{activeChannels} Aktif</p>
         </div>
 
         <div style={{ 
@@ -1784,8 +1969,8 @@ function SimpleChannels() {
           <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
             En Popüler
           </p>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Trendyol</p>
-          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>%45.2</p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>{topChannel || '—'}</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>{topChannel ? '' : 'Veri yok'}</p>
         </div>
 
         <div style={{ 
@@ -1798,8 +1983,8 @@ function SimpleChannels() {
           <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
             Toplam Ciro
           </p>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>₺600K</p>
-          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Bu ay</p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>—</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Veri yok</p>
         </div>
 
         <div style={{ 
@@ -1812,8 +1997,8 @@ function SimpleChannels() {
           <p style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
             Ort. Sipariş
           </p>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>1,010</p>
-          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Kanal başına</p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>—</p>
+          <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>Veri yok</p>
         </div>
       </div>
 
@@ -1872,48 +2057,70 @@ function SimpleChannels() {
               </tr>
             </thead>
             <tbody>
-              {mockChannels.map(channel => (
+              {list.map(channel => (
                 <tr key={channel.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
                   <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', backgroundColor: '#E94560', borderRadius: '50%' }}></div>
+                      <div style={{ width: '8px', height: '8px', backgroundColor: channel.isActive ? '#10B981' : '#F59E0B', borderRadius: '50%' }}></div>
                       {channel.name}
                     </div>
                   </td>
                   <td style={{ padding: '12px', fontSize: '14px', color: '#111827' }}>
-                    {channel.country || ''}
+                    {channel.countryCode || ''}
                   </td>
                   <td style={{ padding: '12px' }}>
-                    <span style={{ padding: '4px 8px', backgroundColor: '#10B981', color: 'white', borderRadius: '4px', fontSize: '12px' }}>
-                      Aktif
-                    </span>
+                    <button
+                      onClick={() => handleToggleStatus(channel)}
+                      disabled={busyChannelId === channel.id}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: channel.isActive ? '#10B981' : '#F59E0B',
+                        color: 'white',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        border: 'none',
+                        cursor: busyChannelId === channel.id ? 'not-allowed' : 'pointer',
+                        opacity: busyChannelId === channel.id ? 0.7 : 1
+                      }}
+                    >
+                      {channel.isActive ? 'Aktif' : 'Pasif'}
+                    </button>
                   </td>
                   <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
-                    {channel.orders.toLocaleString('tr-TR')}
+                    {'—'}
                   </td>
                   <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>
-                    {formatCurrency(channel.revenue)}
+                    {'—'}
                   </td>
                   <td style={{ padding: '12px', fontSize: '14px', color: '#111827' }}>
-                    {channel.commission}%
+                    {channel.commissionPct}%
                   </td>
                   <td style={{ padding: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '100px', height: '8px', backgroundColor: '#F3F4F6', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ width: `${channel.performance}%`, height: '100%', backgroundColor: '#10B981' }}></div>
+                        <div style={{ width: '0%', height: '100%', backgroundColor: '#10B981' }}></div>
                       </div>
-                      <span style={{ fontSize: '12px', color: '#6B7280' }}>{channel.performance}%</span>
+                      <span style={{ fontSize: '12px', color: '#6B7280' }}></span>
                     </div>
                   </td>
                   <td style={{ padding: '12px' }}>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button style={{ padding: '4px 8px', backgroundColor: '#3B82F6', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      <button
+                        onClick={() => handleDetails(channel.id)}
+                        style={{ padding: '4px 8px', backgroundColor: '#3B82F6', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                      >
                         Detay
                       </button>
-                      <button style={{ padding: '4px 8px', backgroundColor: '#F59E0B', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      <button
+                        onClick={() => handleSettings(channel)}
+                        style={{ padding: '4px 8px', backgroundColor: '#F59E0B', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                      >
                         Ayarlar
                       </button>
-                      <button style={{ padding: '4px 8px', backgroundColor: '#8B5CF6', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                      <button
+                        onClick={() => handleWebhookTest(channel)}
+                        style={{ padding: '4px 8px', backgroundColor: '#8B5CF6', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                      >
                         Webhook Test
                       </button>
                     </div>
@@ -1933,10 +2140,10 @@ function SimpleChannels() {
                   —
                 </td>
                 <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '600' }}>
-                  {mockChannels.reduce((sum, ch) => sum + ch.orders, 0).toLocaleString('tr-TR')}
+                  {'—'}
                 </td>
                 <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '600' }}>
-                  {formatCurrency(mockChannels.reduce((sum, ch) => sum + ch.revenue, 0))}
+                  {'—'}
                 </td>
                 <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '600' }}>
                   —
@@ -1952,6 +2159,82 @@ function SimpleChannels() {
           </table>
         </div>
       </div>
+
+      {detailModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(17,24,39,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ width: '520px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #E5E7EB', padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h4 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>Kanal Detayi</h4>
+              <button onClick={() => setDetailModalOpen(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '18px' }}>x</button>
+            </div>
+            {modalError ? (
+              <div style={{ color: '#B91C1C', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', padding: '10px' }}>{modalError}</div>
+            ) : !detailData ? (
+              <p style={{ color: '#6B7280' }}>Yukleniyor...</p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '14px' }}>
+                <div><strong>Kanal:</strong> {detailData.name ?? '-'}</div>
+                <div><strong>Durum:</strong> {detailData.isActive ? 'Aktif' : 'Pasif'}</div>
+                <div><strong>Komisyon:</strong> {detailData.commissionPct ?? '-'}%</div>
+                <div><strong>Ulke:</strong> {detailData.countryCode ?? '-'}</div>
+                <div style={{ gridColumn: '1 / span 2' }}><strong>Webhook IP:</strong> {Array.isArray(detailData.webhookIps) ? detailData.webhookIps.join(', ') : '-'}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {settingsModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(17,24,39,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ width: '480px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #E5E7EB', padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h4 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>Kanal Ayarlari</h4>
+              <button onClick={() => setSettingsModalOpen(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '18px' }}>x</button>
+            </div>
+            <p style={{ marginTop: 0, color: '#374151', fontSize: '14px' }}>{selectedChannel?.name ?? ''} komisyon guncellemesi</p>
+            <label style={{ fontSize: '13px', color: '#6B7280', display: 'block', marginBottom: '6px' }}>Komisyon %</label>
+            <input
+              value={settingsCommission}
+              onChange={(e) => setSettingsCommission(e.target.value)}
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              style={{ width: '100%', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '10px 12px', fontSize: '14px' }}
+            />
+            {modalError && (
+              <div style={{ marginTop: '10px', color: '#B91C1C', fontSize: '13px' }}>{modalError}</div>
+            )}
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
+              <button onClick={() => setSettingsModalOpen(false)} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', background: '#fff', cursor: 'pointer' }}>Iptal</button>
+              <button onClick={submitSettings} disabled={!!busyChannelId} style={{ padding: '8px 12px', borderRadius: '6px', border: 'none', background: '#10B981', color: '#fff', cursor: 'pointer' }}>Kaydet</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {webhookModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(17,24,39,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ width: '520px', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #E5E7EB', padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h4 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>Webhook Test</h4>
+              <button onClick={() => setWebhookModalOpen(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '18px' }}>x</button>
+            </div>
+            <p style={{ marginTop: 0, color: '#374151', fontSize: '14px' }}>{selectedChannel?.name ?? ''}</p>
+            {modalError ? (
+              <div style={{ color: '#B91C1C', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', padding: '10px' }}>{modalError}</div>
+            ) : !webhookData ? (
+              <p style={{ color: '#6B7280' }}>Test calistiriliyor...</p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', fontSize: '14px' }}>
+                <div><strong>IP:</strong> {webhookData.ipCheck ?? '-'}</div>
+                <div><strong>HMAC:</strong> {webhookData.hmacCheck ?? '-'}</div>
+                <div><strong>Idempotency:</strong> {webhookData.idempotency ?? '-'}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -2240,13 +2523,13 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<SimpleDashboard />} />
-        <Route path="/reports" element={<SimpleReports />} />
-        <Route path="/stock-alerts" element={<SimpleStockAlerts />} />
-        <Route path="/excess-codes" element={<SimpleExcessCodes />} />
         <Route path="/orders" element={<SimpleOrders />} />
-        <Route path="/products" element={<SimpleProducts />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/products2" element={<ProductManagement />} />
+        <Route path="/product-management" element={<ProductManagement />} />
         <Route path="/providers" element={<SimpleProviders />} />
         <Route path="/channels" element={<SimpleChannels />} />
+        <Route path="/excess-codes" element={<ExcessCodes />} />
         <Route path="/system-health" element={<SystemHealth />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

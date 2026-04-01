@@ -33,7 +33,7 @@ import { cn } from '../lib/utils'
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // Geçici user data
-  const user = { id: '1', email: 'admin@omega.com', role: 'ADMIN' as const }
+  const user = { id: '1', email: 'admin@omega.com', role: 'ADMIN' }
   const logout = () => {
     // Geçici logout - sadece console log
     console.log('Logout clicked')
@@ -125,7 +125,8 @@ export function Layout() {
       {/* Sidebar */}
       <div style={{
         position: sidebarOpen ? 'fixed' : 'relative',
-        insetY: 0,
+        top: 0,
+        bottom: 0,
         left: 0,
         zIndex: 50,
         width: '256px',

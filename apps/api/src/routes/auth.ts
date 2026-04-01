@@ -4,9 +4,9 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../config/database';
 import { validate } from '../middleware/validation';
 import { createRateLimit, authenticate } from '../middleware/security';
-import { LoginRequestSchema, LoginResponseSchema, JWT_CONFIG, HTTP_STATUS, UserRole, RATE_LIMITS } from '@omega/shared';
+import { LoginRequestSchema, LoginResponse, JWT_CONFIG, HTTP_STATUS, UserRole, RATE_LIMITS } from '@omega/shared';
 
-const router = Router();
+const router: Router = Router();
 
 // Apply auth-specific rate limiting
 router.use(createRateLimit(RATE_LIMITS.AUTH));
@@ -93,7 +93,7 @@ router.post('/login',
         }
       }).catch(() => {}); // Ignore errors
 
-      const response: LoginResponseSchema = {
+      const response: LoginResponse = {
         accessToken,
         expiresIn: JWT_CONFIG.ACCESS_TOKEN_EXPIRES_IN
       };
@@ -168,7 +168,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
       { expiresIn: JWT_CONFIG.ACCESS_TOKEN_EXPIRES_IN }
     );
 
-    const response: LoginResponseSchema = {
+    const response: LoginResponse = {
       accessToken: newAccessToken,
       expiresIn: JWT_CONFIG.ACCESS_TOKEN_EXPIRES_IN
     };

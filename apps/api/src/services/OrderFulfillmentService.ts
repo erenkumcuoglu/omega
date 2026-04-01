@@ -2,6 +2,7 @@ import pino from 'pino';
 import { prisma } from '../config/database';
 import { redis } from '../config/redis';
 import { TurkpinService } from './TurkpinService';
+import { TrendyolService } from './TrendyolService';
 import { CryptoService } from '../utils/crypto';
 import { 
   WebhookPayload, 
@@ -30,9 +31,11 @@ export class OrderFulfillmentService {
   private queue: Queue;
   private worker: Worker;
   private turkpinService: TurkpinService;
+  private trendyolService: TrendyolService;
 
   private constructor() {
     this.turkpinService = TurkpinService.getInstance();
+    this.trendyolService = TrendyolService.getInstance();
     
     // Initialize BullMQ queue
     this.queue = new Queue('order-fulfillment', {
@@ -99,7 +102,10 @@ export class OrderFulfillmentService {
 
       // Find sales channel and provider
       const channel = await prisma.salesChannel.findFirst({
-        where: { name: channelName, isActive: true },
+        where: {
+          name: { equals: channelName, mode: 'insensitive' },
+          isActive: true
+        },
         include: { orders: false }
       });
 
@@ -138,14 +144,22 @@ export class OrderFulfillmentService {
           channelId: channel.id,
           providerId: product.providerId,
           productId: product.id,
-          customerName: payload.customerName,
+          customerName: payload.customerName || 'Unknown Customer',
+          ...(payload.customerEmail && { customerEmail: payload.customerEmail }),
+          ...(payload.customerPhone && { customerPhone: payload.customerPhone }),
           sellingPrice,
           purchasePrice,
-          marginAmount,
           commissionPct: channel.commissionPct,
           commissionAmount,
           profit,
           status: OrderStatus.PENDING,
+          externalId: payload.orderId,
+          metadata: {
+            channelPayload: payload.metadata || {},
+            packageId: payload.packageId || null,
+            lineItemId: payload.lineItemId || null,
+            trackingInfo: payload.trackingInfo || payload.customerPhone || null
+          },
           orderedAt: new Date(payload.orderedAt)
         }
       });
@@ -227,6 +241,11 @@ export class OrderFulfillmentService {
       if (orderResult.codes && orderResult.codes.length > 0) {
         // Success - encrypt the digital code
         const digitalCode = orderResult.codes[0];
+
+        if (channelName.toLowerCase() === 'trendyol') {
+          await this.deliverToTrendyol(order, digitalCode);
+        }
+
         const encryptedCode = CryptoService.encrypt(digitalCode);
 
         // Update order with fulfillment data
@@ -342,6 +361,51 @@ export class OrderFulfillmentService {
       }).catch(() => {}); // Ignore if order doesn't exist
 
       throw error;
+    }
+  }
+
+  private async deliverToTrendyol(order: any, digitalCode: string): Promise<void> {
+    const metadata = (order.metadata || {}) as Record<string, any>;
+    const packageId = String(metadata.packageId || '').trim();
+    const phoneNumber = String(metadata.trackingInfo || order.customerPhone || '').trim();
+
+    if (!packageId) {
+      throw new Error('Trendyol packageId is required for digital delivery');
+    }
+
+    if (!phoneNumber) {
+      throw new Error('Customer phone is required for Trendyol digital delivery');
+    }
+
+    const deliveryResponse = await this.trendyolService.processAlternativeDeliveryDigital({
+      packageId,
+      phoneNumber,
+      params: {
+        digitalCode,
+        orderId: order.externalId || order.id,
+        productSku: order.product?.sku || ''
+      }
+    });
+
+    if (deliveryResponse.status >= 400) {
+      await prisma.$transaction(async (tx) => {
+        await tx.excessCode.create({
+          data: {
+            productId: order.productId,
+            channelId: order.channelId,
+            digitalCode,
+            providerOrderNo: order.providerOrderNo || null,
+            reason: 'FULFILLMENT_FAILED'
+          }
+        });
+
+        await tx.order.update({
+          where: { id: order.id },
+          data: { status: OrderStatus.FAILED }
+        });
+      });
+
+      throw new Error(`Trendyol alternative delivery failed with status ${deliveryResponse.status}`);
     }
   }
 

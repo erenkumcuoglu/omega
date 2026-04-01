@@ -13,7 +13,10 @@ import axios from 'axios'
 import { XMLParser } from 'fast-xml-parser'
 
 // Routes
-// import webhookRoutes from './routes/webhook.routes'
+// import authRoutes from './routes/auth.routes'
+// import usersRoutes from './routes/users.routes'
+import productsRoutes from './routes/products.routes'
+import productsSyncRoutes from './routes/products-sync.routes'
 
 // Load environment variables
 dotenv.config()
@@ -1508,6 +1511,12 @@ app.get('/api/test', (req, res) => {
     timestamp: new Date().toISOString()
   })
 })
+
+// Route registrations
+// app.use('/api/auth', authRoutes)
+// app.use('/api/users', usersRoutes)
+app.use('/api/products', productsRoutes)
+app.use('/api/products', productsSyncRoutes)
 
 // Global error handler
 app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

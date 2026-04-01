@@ -37,7 +37,7 @@ export const validate = (schema: ZodSchema, source: 'body' | 'query' | 'params' 
 
 // Custom validation middleware for webhook signatures
 export const validateWebhook = (req: Request, res: Response, next: NextFunction) => {
-  const requiredFields = ['orderId', 'channel', 'productId', 'quantity', 'sellingPrice', 'orderedAt'];
+  const requiredFields = ['orderId', 'productId', 'quantity', 'sellingPrice', 'orderedAt'];
   
   for (const field of requiredFields) {
     if (!req.body[field]) {
@@ -48,9 +48,21 @@ export const validateWebhook = (req: Request, res: Response, next: NextFunction)
     }
   }
 
+  const validChannels = ['trendyol', 'hepsiburada', 'ozan', 'ozon'];
+  const inferredChannel = req.path.includes('trendyol')
+    ? 'trendyol'
+    : req.path.includes('hepsiburada')
+      ? 'hepsiburada'
+      : req.path.includes('ozan')
+        ? 'ozan'
+        : req.path.includes('ozon')
+          ? 'ozon'
+        : undefined;
+
+  req.body.channel = req.body.channel || inferredChannel;
+
   // Validate channel
-  const validChannels = ['trendyol', 'hepsiburada', 'ozan'];
-  if (!validChannels.includes(req.body.channel)) {
+  if (!req.body.channel || !validChannels.includes(req.body.channel)) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
       error: 'Validation failed',
       message: `Invalid channel. Must be one of: ${validChannels.join(', ')}`

@@ -3,21 +3,22 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY packages/shared/package*.json ./packages/shared/
-
-# Install dependencies
-RUN npm ci --only=production
-
-# Copy source code
+# Copy all source code and manifests
 COPY . .
 
+# Enable pnpm and install dependencies from workspace lockfile
+RUN corepack enable && corepack prepare pnpm@latest --activate
+ENV CI=true
+RUN pnpm install --frozen-lockfile
+
+# Generate Prisma client (if needed by shared package)
+RUN cd /app/apps/api && npx prisma generate || true
+
 # Build shared package
-RUN npm run build:shared
+RUN pnpm --filter @omega/shared build
 
 # Build the CMS
-RUN npm run build
+RUN pnpm --filter @omega/cms build
 
 # Production stage
 FROM nginx:alpine
@@ -26,7 +27,7 @@ FROM nginx:alpine
 COPY --from=builder /app/apps/cms/dist /usr/share/nginx/html
 
 # Copy nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/cms/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port
 EXPOSE 80

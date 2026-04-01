@@ -144,7 +144,7 @@ export const successResponses = {
       order_no: orderNo,
       order_code: '',
       order_status_description: statusDescription,
-      check_date,
+      checkDate,
       extra: extra || ''
     })
 }

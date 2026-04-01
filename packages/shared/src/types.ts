@@ -123,13 +123,18 @@ export const LoginResponseSchema = z.object({
 
 export const WebhookPayloadSchema = z.object({
   orderId: z.string(),
-  channel: z.enum(['trendyol', 'hepsiburada', 'ozan']),
+  channel: z.enum(['trendyol', 'hepsiburada', 'ozan', 'ozon']),
   customerName: z.string().optional(),
   customerEmail: z.string().optional(),
+  customerPhone: z.string().optional(),
   productId: z.string(),
   quantity: z.number().int().min(1),
   sellingPrice: z.number().min(0),
-  orderedAt: z.string().datetime()
+  orderedAt: z.string().datetime(),
+  packageId: z.string().optional(),
+  lineItemId: z.string().optional(),
+  trackingInfo: z.string().optional(),
+  metadata: z.record(z.any()).optional()
 });
 
 // Turkpin API Schemas

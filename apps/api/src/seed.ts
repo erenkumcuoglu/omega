@@ -12,6 +12,7 @@ async function seed() {
       update: {},
       create: {
         email: 'admin@omega.com',
+        name: 'Admin User',
         passwordHash,
         role: UserRole.ADMIN,
         isActive: true,
